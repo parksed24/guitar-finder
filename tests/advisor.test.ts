@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { recommendGuitars } from "../src/advisor.js";
+import { recommendGuitars } from "../src/engine/advisor";
 
 describe("Advisor constrained ranking", () => {
   it("recommends Misha signature guitars first for Misha + Djent + $3k-$5k", () => {

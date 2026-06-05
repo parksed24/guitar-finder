@@ -1,0 +1,12 @@
+node_modules/
+.next/
+.next-cache-home/
+.pnpm-store/
+
+.env
+.env*.local
+
+coverage/
+dist/
+*.tsbuildinfo
+.DS_Store
