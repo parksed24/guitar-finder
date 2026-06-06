@@ -14,6 +14,7 @@ export interface QualifiedListingCandidate {
 export interface ListingEnrichmentResult {
   sourceUrl: string;
   title?: string;
+  description?: string;
   imageUrls?: string[];
   primaryImage?: ListingImage;
   galleryImages?: ListingImage[];
@@ -36,6 +37,33 @@ export interface ListingEnrichmentResult {
     | "none";
   confidence: number;
   extractedAt: string;
+  rejectionReasons?: string[];
+  metadataSources?: ListingMetadataFragment["source"][];
+  cacheStatus?: "merged" | "partial" | "error";
+}
+
+export interface ListingMetadataFragment {
+  source:
+    | "structured-api"
+    | "search-rich-result"
+    | "json-ld"
+    | "microdata"
+    | "meta-tag"
+    | "open-graph"
+    | "twitter-card"
+    | "embedded-product-json"
+    | "source-adapter";
+  title?: string;
+  description?: string;
+  itemPrice?: number;
+  currency?: string;
+  availability?: string;
+  condition?: string;
+  sellerName?: string;
+  locationLabel?: string;
+  imageUrls?: string[];
+  imageCandidates?: ListingImage[];
+  confidence: number;
   rejectionReasons?: string[];
 }
 
@@ -60,6 +88,22 @@ export interface ExtractedPrice {
   method: "structured-api" | "search-rich-result" | "json-ld-offer" | "microdata" | "meta-tag" | "embedded-product-json" | "open-graph" | "source-adapter" | "none";
   label?: string;
   rejectionReason?: string;
+}
+
+export interface PriceCandidate {
+  value: number;
+  currency?: string;
+  source:
+    | "structured-api"
+    | "source-adapter"
+    | "json-ld-offer"
+    | "json-ld-aggregate-offer"
+    | "microdata"
+    | "meta-tag"
+    | "embedded-product-json"
+    | "search-rich-result";
+  confidence: number;
+  rawText?: string;
 }
 
 export type MetadataFetcher = (input: string, init: RequestInit) => Promise<Response>;
@@ -130,18 +174,54 @@ export function formatPriceLabel(value: number, currency = "USD") {
   return `${currency.toUpperCase()} ${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value)}`;
 }
 
+export function normalizePriceValue(input: string | number | undefined): number | undefined {
+  if (typeof input === "number") return priceLooksSane(input) ? input : undefined;
+  if (!input) return undefined;
+  const raw = String(input).trim();
+  if (!raw) return undefined;
+  if (priceRejectionReason(raw)) return undefined;
+  if (/\d[\s,.]*[-–—][\s,.]*[$£€¥]?\s*\d/.test(raw)) return undefined;
+
+  const match = raw.match(/(?:US\s*)?[$£€¥]?\s*([0-9][0-9.,\s]{1,14})(?:\s*(?:usd|cad|eur|gbp|jpy))?/i);
+  if (!match?.[1]) return undefined;
+
+  let numeric = match[1].replace(/\s/g, "");
+  const lastComma = numeric.lastIndexOf(",");
+  const lastDot = numeric.lastIndexOf(".");
+
+  if (lastComma > -1 && lastDot > -1) {
+    numeric = lastComma > lastDot
+      ? numeric.replace(/\./g, "").replace(",", ".")
+      : numeric.replace(/,/g, "");
+  } else if (lastComma > -1) {
+    const parts = numeric.split(",");
+    const last = parts[parts.length - 1] ?? "";
+    numeric = last.length === 2 ? `${parts.slice(0, -1).join("")}.${last}` : numeric.replace(/,/g, "");
+  } else if (lastDot > -1) {
+    const parts = numeric.split(".");
+    const last = parts[parts.length - 1] ?? "";
+    if (parts.length > 2 || last.length === 3) numeric = numeric.replace(/\./g, "");
+  }
+
+  const value = Number(numeric);
+  return priceLooksSane(value) ? value : undefined;
+}
+
 function parsePriceValue(value: unknown) {
-  if (typeof value === "number") return value;
-  const match = String(value ?? "").replace(/,/g, "").match(/(?:US\s*)?\$?\s*(\d{3,6})(?:\.\d{1,2})?/i);
-  return match ? Number(match[1]) : undefined;
+  return normalizePriceValue(typeof value === "number" ? value : String(value ?? ""));
 }
 
 function priceLooksSane(value: number | undefined) {
-  return value !== undefined && Number.isFinite(value) && value >= 100 && value <= 100_000;
+  return value !== undefined && Number.isFinite(value) && value >= 100 && value <= 1_000_000;
+}
+
+function hasUsefulValue(value: unknown) {
+  return value !== undefined && value !== null && String(value).trim() !== "";
 }
 
 function priceRejectionReason(text: string) {
   const value = normalize(text);
+  if (/\d[\s,.]*[-–—][\s,.]*[$£€¥]?\s*\d/.test(text)) return "valuation-range";
   if (/\b(price guide|value guide|valuation|worth around|worth about|estimated value|estimate)\b/.test(value)) return "price-guide-value";
   if (/\b(sold for|sold at|sold last|historical|ended at|previously sold)\b/.test(value)) return "historical-price";
   if (/\b(month|monthly|per month|financing|affirm|klarna|afterpay)\b/.test(value)) return "financing-payment";
@@ -155,20 +235,207 @@ function hasSaleIntent(text: string) {
   return /\b(price|asking|for sale|fs\b|obo|shipped|paypal|buy now|in stock|add to cart|used|new)\b/i.test(text);
 }
 
+function imageUrlForPage(value: string | undefined, sourceUrl: string) {
+  if (!value) return undefined;
+  try {
+    const absolute = value.startsWith("//") ? `https:${value}` : new URL(value, sourceUrl).toString();
+    return safeImageUrl(absolute);
+  } catch {
+    return safeImageUrl(value);
+  }
+}
+
 export function extractPriceFromText(text: string, method: ExtractedPrice["method"]): ExtractedPrice {
   const rejectionReason = priceRejectionReason(text);
   if (rejectionReason) return { confidence: 0, method: "none", rejectionReason };
   if (!hasSaleIntent(text)) return { confidence: 0, method: "none", rejectionReason: "low-confidence-price" };
-  const value = parsePriceValue(text);
+  const value = normalizePriceValue(text);
   if (!priceLooksSane(value)) return { confidence: 0, method: "none", rejectionReason: "low-confidence-price" };
   const safeValue = value as number;
-  const currency = /\b(?:cad|gbp|eur|jpy)\b/i.exec(text)?.[0]?.toUpperCase() || "USD";
+  const currency = /\b(?:cad|gbp|eur|jpy|usd)\b/i.exec(text)?.[0]?.toUpperCase()
+    || (text.includes("£") ? "GBP" : text.includes("€") ? "EUR" : text.includes("¥") ? "JPY" : "USD");
   return {
     value: safeValue,
     currency,
     confidence: method === "search-rich-result" ? 0.86 : 0.9,
     method,
     label: formatPriceLabel(safeValue, currency)
+  };
+}
+
+const pricePrecedence: ListingMetadataFragment["source"][] = [
+  "structured-api",
+  "source-adapter",
+  "json-ld",
+  "microdata",
+  "embedded-product-json",
+  "search-rich-result",
+  "meta-tag",
+  "open-graph",
+  "twitter-card"
+];
+
+const titlePrecedence: ListingMetadataFragment["source"][] = [
+  "structured-api",
+  "source-adapter",
+  "json-ld",
+  "open-graph",
+  "twitter-card",
+  "search-rich-result",
+  "meta-tag",
+  "microdata",
+  "embedded-product-json"
+];
+
+const descriptionPrecedence: ListingMetadataFragment["source"][] = [
+  "source-adapter",
+  "json-ld",
+  "open-graph",
+  "twitter-card",
+  "search-rich-result",
+  "meta-tag",
+  "microdata",
+  "embedded-product-json",
+  "structured-api"
+];
+
+const imagePrecedence: ListingImage["source"][] = [
+  "structured-api",
+  "source-adapter",
+  "json-ld",
+  "embedded-product-json",
+  "open-graph",
+  "twitter-card",
+  "search-thumbnail",
+  "placeholder"
+];
+
+function sourcePriority(source: ListingMetadataFragment["source"], order: ListingMetadataFragment["source"][]) {
+  const index = order.indexOf(source);
+  return index === -1 ? order.length : index;
+}
+
+function imageSourcePriority(source: ListingImage["source"]) {
+  const index = imagePrecedence.indexOf(source);
+  return index === -1 ? imagePrecedence.length : index;
+}
+
+function preferredFragment<T>(
+  fragments: ListingMetadataFragment[],
+  key: keyof ListingMetadataFragment,
+  order: ListingMetadataFragment["source"][]
+): T | undefined {
+  const candidates = fragments
+    .filter(fragment => hasUsefulValue(fragment[key]))
+    .sort((a, b) => {
+      const precedence = sourcePriority(a.source, order) - sourcePriority(b.source, order);
+      return precedence || b.confidence - a.confidence;
+    });
+  return candidates[0]?.[key] as T | undefined;
+}
+
+function metadataSourceFromMethod(method: ListingEnrichmentResult["extractionMethod"]): ListingMetadataFragment["source"] | undefined {
+  if (method === "json-ld-offer") return "json-ld";
+  if (method === "source-specific-parser") return "source-adapter";
+  if (method === "search-rich-result") return "search-rich-result";
+  if (method === "microdata") return "microdata";
+  if (method === "meta-tag") return "meta-tag";
+  if (method === "open-graph") return "open-graph";
+  if (method === "embedded-product-json") return "embedded-product-json";
+  if (method === "structured-api") return "structured-api";
+  return undefined;
+}
+
+function resultToFragment(result: ListingEnrichmentResult): ListingMetadataFragment | undefined {
+  const source = metadataSourceFromMethod(result.extractionMethod);
+  if (!source) return undefined;
+  const images = result.galleryImages?.length ? result.galleryImages : result.primaryImage ? [result.primaryImage] : [];
+  if (!hasUsefulValue(result.title) && !hasUsefulValue(result.description) && result.itemPrice === undefined && !images.length && !hasUsefulValue(result.availability) && !hasUsefulValue(result.condition) && !hasUsefulValue(result.sellerName) && !hasUsefulValue(result.locationLabel)) {
+    return undefined;
+  }
+  return {
+    source,
+    title: result.title,
+    description: result.description,
+    itemPrice: result.itemPrice,
+    currency: result.currency,
+    availability: result.availability,
+    condition: result.condition,
+    sellerName: result.sellerName,
+    locationLabel: result.locationLabel,
+    imageUrls: result.imageUrls,
+    imageCandidates: images,
+    confidence: result.confidence,
+    rejectionReasons: result.rejectionReasons
+  };
+}
+
+function priceResultToFragment(price: ExtractedPrice): ListingMetadataFragment | undefined {
+  const source = metadataSourceFromMethod(price.method as ListingEnrichmentResult["extractionMethod"]);
+  if (!source || price.confidence < 0.85 || price.value === undefined) return undefined;
+  return {
+    source,
+    itemPrice: price.value,
+    currency: price.currency,
+    confidence: price.confidence,
+    rejectionReasons: price.rejectionReason ? [price.rejectionReason] : undefined
+  };
+}
+
+export function mergeListingMetadata(sourceUrl: string, fragments: ListingMetadataFragment[], now = Date.now(), fallbackTitle = "Listing image"): ListingEnrichmentResult {
+  const usefulFragments = fragments.filter(Boolean);
+  const title = preferredFragment<string>(usefulFragments, "title", titlePrecedence);
+  const description = preferredFragment<string>(usefulFragments, "description", descriptionPrecedence);
+  const selectedPrice = usefulFragments
+    .filter(fragment => priceLooksSane(fragment.itemPrice) && fragment.confidence >= 0.85)
+    .sort((a, b) => {
+      const precedence = sourcePriority(a.source, pricePrecedence) - sourcePriority(b.source, pricePrecedence);
+      return precedence || b.confidence - a.confidence;
+    })[0];
+  const imageInputs: Array<Partial<ListingImage>> = [];
+  for (const fragment of usefulFragments) {
+    if (fragment.imageCandidates?.length) {
+      imageInputs.push(...fragment.imageCandidates);
+      continue;
+    }
+    for (const url of fragment.imageUrls ?? []) {
+      imageInputs.push({ url, source: fragment.source === "json-ld" ? "json-ld" : fragment.source === "source-adapter" ? "source-adapter" : fragment.source === "embedded-product-json" ? "embedded-product-json" : fragment.source === "twitter-card" ? "twitter-card" : fragment.source === "search-rich-result" ? "search-thumbnail" : "open-graph", alt: title || fallbackTitle });
+    }
+  }
+  const imageCandidates = normalizeListingImages(imageInputs, title || fallbackTitle)
+    .sort((a, b) => imageSourcePriority(a.source) - imageSourcePriority(b.source));
+  const extractionMethod = selectedPrice
+    ? selectedPrice.source === "json-ld" ? "json-ld-offer"
+      : selectedPrice.source === "source-adapter" ? "source-specific-parser"
+        : selectedPrice.source
+    : imageCandidates[0]?.source === "source-adapter" ? "source-specific-parser"
+      : imageCandidates[0]?.source === "json-ld" ? "json-ld-offer"
+        : imageCandidates[0]?.source === "search-thumbnail" ? "search-rich-result"
+          : imageCandidates[0]?.source ?? "none";
+  const metadataSources = Array.from(new Set(usefulFragments.map(fragment => fragment.source)));
+  const confidence = Math.max(0, ...usefulFragments.map(fragment => fragment.confidence), imageCandidates.length ? 0.55 : 0);
+  const itemPrice = selectedPrice?.itemPrice;
+  const currency = selectedPrice?.currency;
+  return {
+    sourceUrl,
+    title,
+    description,
+    imageUrls: imageCandidates.map(image => image.url).filter((url): url is string => Boolean(url)),
+    primaryImage: imageCandidates[0],
+    galleryImages: imageCandidates,
+    itemPrice,
+    currency,
+    priceLabel: itemPrice !== undefined ? formatPriceLabel(itemPrice, currency) : undefined,
+    availability: preferredFragment<string>(usefulFragments, "availability", pricePrecedence),
+    condition: preferredFragment<string>(usefulFragments, "condition", pricePrecedence),
+    sellerName: preferredFragment<string>(usefulFragments, "sellerName", descriptionPrecedence),
+    locationLabel: preferredFragment<string>(usefulFragments, "locationLabel", descriptionPrecedence),
+    extractionMethod: extractionMethod as ListingEnrichmentResult["extractionMethod"],
+    confidence,
+    extractedAt: new Date(now).toISOString(),
+    rejectionReasons: usefulFragments.flatMap(fragment => fragment.rejectionReasons ?? []),
+    metadataSources,
+    cacheStatus: metadataSources.length ? "merged" : "partial"
   };
 }
 
@@ -196,10 +463,12 @@ function extractMetaPrice(html: string): ExtractedPrice {
 }
 
 function extractEmbeddedProductMetadata(html: string, sourceUrl: string, now = Date.now()): ListingEnrichmentResult {
-  const priceMatch = html.match(/"price"\s*:\s*"?(\d{3,8})(?:\.\d{1,2})?"?/i)
-    ?? html.match(/"amount"\s*:\s*"?(\d{3,8})(?:\.\d{1,2})?"?/i);
+  const priceMatch = html.match(/"(?:price|salePrice|currentPrice)"\s*:\s*"([^"]{2,40})"/i)
+    ?? html.match(/"(?:price|salePrice|currentPrice)"\s*:\s*([0-9][0-9.,]{1,20})/i)
+    ?? html.match(/"(?:amount|value)"\s*:\s*"([^"]{2,40})"/i)
+    ?? html.match(/"(?:amount|value)"\s*:\s*([0-9][0-9.,]{1,20})/i);
   const currency = html.match(/"currency"\s*:\s*"([A-Z]{3})"/i)?.[1] ?? "USD";
-  const rawPrice = priceMatch?.[1] ? Number(priceMatch[1]) : undefined;
+  const rawPrice = normalizePriceValue(priceMatch?.[1]);
   const itemPrice = rawPrice && rawPrice > 100_000 ? rawPrice / 100 : rawPrice;
   const imageMatches = Array.from(html.matchAll(/"((?:https?:\/\/|\/\/)[^"]*(?:cdn\.shopify|wp-content|woocommerce|images?|cdn)[^"]*)"/gi))
     .map(match => match[1].startsWith("//") ? `https:${match[1]}` : match[1]);
@@ -253,12 +522,15 @@ function flattenJsonLd(value: unknown): Record<string, unknown>[] {
   return [record, ...flattenJsonLd(record["@graph"]), ...flattenJsonLd(record.offers)];
 }
 
-function imagesFromJsonLdValue(value: unknown): string[] {
+function imagesFromJsonLdValue(value: unknown, sourceUrl: string): string[] {
   return arrayOf(value).flatMap(item => {
-    if (typeof item === "string") return [item];
+    if (typeof item === "string") return [imageUrlForPage(item, sourceUrl)].filter((entry): entry is string => Boolean(entry));
     if (item && typeof item === "object") {
       const record = item as Record<string, unknown>;
-      return [record.url, record.contentUrl].filter((entry): entry is string => typeof entry === "string");
+      return [record.url, record.contentUrl]
+        .filter((entry): entry is string => typeof entry === "string")
+        .map(entry => imageUrlForPage(entry, sourceUrl))
+        .filter((entry): entry is string => Boolean(entry));
     }
     return [];
   });
@@ -286,8 +558,9 @@ export function extractJsonLdListingMetadata(html: string, sourceUrl: string, no
   const product = records.find(record => typeIncludes(record["@type"], "product"));
   const offer = records.find(record => typeIncludes(record["@type"], "offer") || typeIncludes(record["@type"], "aggregateoffer"));
   const price = offer ? offerPrice(offer) : undefined;
-  const productImages = product ? imagesFromJsonLdValue(product.image) : [];
+  const productImages = product ? imagesFromJsonLdValue(product.image, sourceUrl) : [];
   const title = typeof product?.name === "string" ? product.name : undefined;
+  const description = typeof product?.description === "string" ? sanitizeSourceText(product.description) : undefined;
   const images = normalizeListingImages(productImages.map(url => ({ url, source: "json-ld" as const, alt: title || "Listing image", fit: "contain" as const })), title || "Listing image");
 
   if (!offer) reasons.push("missing-offer");
@@ -296,6 +569,7 @@ export function extractJsonLdListingMetadata(html: string, sourceUrl: string, no
   return {
     sourceUrl,
     title,
+    description,
     imageUrls: images.map(image => image.url).filter((url): url is string => Boolean(url)),
     primaryImage: images[0],
     galleryImages: images,
@@ -304,8 +578,8 @@ export function extractJsonLdListingMetadata(html: string, sourceUrl: string, no
     priceLabel: price && price.value !== undefined ? formatPriceLabel(price.value, price.currency) : undefined,
     availability: typeof offer?.availability === "string" ? offer.availability.split("/").pop() : undefined,
     condition: typeof offer?.itemCondition === "string" ? offer.itemCondition.split("/").pop() : undefined,
-    extractionMethod: price ? "json-ld-offer" : "none",
-    confidence: price ? 0.94 : 0,
+    extractionMethod: price ? "json-ld-offer" : images.length || title || description ? "json-ld-offer" : "none",
+    confidence: price ? 0.94 : images.length ? 0.6 : title || description ? 0.35 : 0,
     extractedAt: new Date(now).toISOString(),
     rejectionReasons: reasons
   };
@@ -319,8 +593,9 @@ function extractOpenGraph(html: string, sourceUrl: string, now = Date.now()): Li
     return match?.[1];
   };
   const title = meta("og:title");
-  const imageUrl = safeImageUrl(meta("og:image"));
-  const twitterImageUrl = safeImageUrl(meta("twitter:image"));
+  const description = sanitizeSourceText(meta("og:description") ?? meta("description"));
+  const imageUrl = imageUrlForPage(meta("og:image"), sourceUrl);
+  const twitterImageUrl = imageUrlForPage(meta("twitter:image"), sourceUrl);
   const price = extractMetaPrice(html);
   const currency = meta("product:price:currency") || price.currency || "USD";
   const images = normalizeListingImages([
@@ -331,6 +606,7 @@ function extractOpenGraph(html: string, sourceUrl: string, now = Date.now()): Li
   return {
     sourceUrl,
     title,
+    description,
     imageUrls: images.map(image => image.url).filter((url): url is string => Boolean(url)),
     primaryImage: images[0],
     galleryImages: images,
@@ -396,22 +672,12 @@ async function enrichFromPage(sourceUrl: string, options: EnrichmentOptions, pre
   const openGraph = policy?.allowOpenGraphExtraction === false ? emptyEnrichment(sourceUrl, options.now, ["open-graph-extraction-not-permitted"]) : extractOpenGraph(html, sourceUrl, options.now);
   const microdata = priceResultToEnrichment(extractMicrodataPrice(html), sourceUrl, options.now);
   const embedded = policy?.allowEmbeddedProductJson === false ? emptyEnrichment(sourceUrl, options.now, ["embedded-product-json-not-permitted"]) : extractEmbeddedProductMetadata(html, sourceUrl, options.now);
-  const bestImages = normalizeListingImages([...(jsonLd.galleryImages ?? []), ...(openGraph.galleryImages ?? []), ...(embedded.galleryImages ?? [])], jsonLd.title || openGraph.title || "Listing image");
-  const best = [jsonLd, openGraph, microdata, embedded].sort((a, b) => b.confidence - a.confidence)[0] ?? jsonLd;
-  const extractionMethod: ListingEnrichmentResult["extractionMethod"] = best.extractionMethod === "json-ld-offer"
-    ? "json-ld-offer"
-    : preferredMethod === "source-specific-parser" && best.confidence > 0
-      ? "source-specific-parser"
-      : best.extractionMethod;
-
+  const merged = mergeListingMetadata(sourceUrl, [jsonLd, openGraph, microdata, embedded].map(resultToFragment).filter((fragment): fragment is ListingMetadataFragment => Boolean(fragment)), options.now, jsonLd.title || openGraph.title || "Listing image");
   return {
-    ...best,
-    title: best.title || openGraph.title,
-    imageUrls: bestImages.map(image => image.url).filter((url): url is string => Boolean(url)),
-    primaryImage: bestImages[0],
-    galleryImages: bestImages,
-    extractionMethod,
-    rejectionReasons: [...(jsonLd.rejectionReasons ?? []), ...(openGraph.rejectionReasons ?? []), ...(microdata.rejectionReasons ?? []), ...(embedded.rejectionReasons ?? [])]
+    ...merged,
+    extractionMethod: preferredMethod === "source-specific-parser" && merged.confidence > 0 ? "source-specific-parser" : merged.extractionMethod,
+    rejectionReasons: [...(jsonLd.rejectionReasons ?? []), ...(openGraph.rejectionReasons ?? []), ...(microdata.rejectionReasons ?? []), ...(embedded.rejectionReasons ?? [])],
+    metadataSources: merged.metadataSources
   };
 }
 
@@ -440,53 +706,38 @@ export async function enrichListingMetadata(candidate: QualifiedListingCandidate
   const searchImages = normalizeListingImages([
     { url: candidate.thumbnailUrl, source: "search-thumbnail" as const, alt: candidate.title, fit: "cover" as const }
   ], candidate.title);
-  let result: ListingEnrichmentResult = {
-    sourceUrl: candidate.url,
+  const searchFragment: ListingMetadataFragment = {
+    source: "search-rich-result",
     title: candidate.title,
-    imageUrls: searchImages.map(image => image.url).filter((url): url is string => Boolean(url)),
-    primaryImage: searchImages[0],
-    galleryImages: searchImages,
+    description: sanitizeSourceText(candidate.snippet),
     itemPrice: searchPrice.confidence >= 0.85 ? searchPrice.value : undefined,
     currency: searchPrice.currency,
-    priceLabel: searchPrice.confidence >= 0.85 && searchPrice.value ? formatPriceLabel(searchPrice.value, searchPrice.currency) : undefined,
-    extractionMethod: searchPrice.confidence >= 0.85 ? "search-rich-result" : "none",
+    imageCandidates: searchImages,
     confidence: searchPrice.confidence >= 0.85 ? searchPrice.confidence : searchImages.length ? 0.45 : 0,
-    extractedAt: new Date(now).toISOString(),
     rejectionReasons: searchPrice.rejectionReason ? [searchPrice.rejectionReason] : []
   };
 
+  const fragments: ListingMetadataFragment[] = [searchFragment];
   const policy = policyForUrl(candidate.url);
   const adapter = adapters.find(item => item.supports(candidate.url));
-  if (policy?.allowMetadataFetch) {
+  if (policy?.allowMetadataFetch !== false) {
     const pageResult = await (adapter
       ? adapter.enrich(candidate.url, options)
       : enrichFromPage(candidate.url, options, "open-graph", policy)
     ).catch(() => emptyEnrichment(candidate.url, now, [adapter ? "source-specific-parser-error" : "metadata-fetch-error"]));
-    result = mergeEnrichment(result, pageResult);
-  } else if (!policy?.allowMetadataFetch) {
-    result.rejectionReasons = [...(result.rejectionReasons ?? []), "metadata-fetch-not-permitted"];
+    const pageFragment = resultToFragment(pageResult);
+    if (pageFragment) fragments.push(pageFragment);
+  } else {
+    searchFragment.rejectionReasons = [...(searchFragment.rejectionReasons ?? []), "metadata-fetch-not-permitted"];
   }
 
-  enrichmentCache.set(cacheKey, { expiresAt: now + ttlMs(), result });
+  const result = mergeListingMetadata(candidate.url, fragments, now, candidate.title);
+  if (result.itemPrice !== undefined || result.galleryImages?.length || result.title) {
+    enrichmentCache.set(cacheKey, { expiresAt: now + ttlMs(), result: { ...result, cacheStatus: "merged" } });
+  }
   return result;
 }
 
 function mergeEnrichment(base: ListingEnrichmentResult, page: ListingEnrichmentResult): ListingEnrichmentResult {
-  const images = normalizeListingImages([...(page.galleryImages ?? []), ...(base.galleryImages ?? [])], page.title || base.title || "Listing image");
-  const usePagePrice = page.itemPrice !== undefined && page.confidence >= 0.85;
-  const useBasePrice = base.itemPrice !== undefined && base.confidence >= 0.85;
-  return {
-    ...base,
-    ...page,
-    title: page.title || base.title,
-    itemPrice: usePagePrice ? page.itemPrice : useBasePrice ? base.itemPrice : undefined,
-    currency: usePagePrice ? page.currency : base.currency,
-    priceLabel: usePagePrice ? page.priceLabel : useBasePrice ? base.priceLabel : undefined,
-    extractionMethod: usePagePrice ? page.extractionMethod : useBasePrice ? base.extractionMethod : images.length ? page.extractionMethod : "none",
-    confidence: Math.max(base.confidence, page.confidence),
-    imageUrls: images.map(image => image.url).filter((url): url is string => Boolean(url)),
-    primaryImage: images[0],
-    galleryImages: images,
-    rejectionReasons: [...(base.rejectionReasons ?? []), ...(page.rejectionReasons ?? [])]
-  };
+  return mergeListingMetadata(base.sourceUrl || page.sourceUrl, [base, page].map(resultToFragment).filter((fragment): fragment is ListingMetadataFragment => Boolean(fragment)), Date.parse(page.extractedAt || base.extractedAt) || Date.now(), page.title || base.title || "Listing image");
 }

@@ -1784,6 +1784,9 @@ function InfoSections({ listing, onCompare }: { listing: Listing; onCompare: () 
     );
   }
 
+  const sellerNotes = sanitizeSourceText(listing.conditionNotes || listing.description);
+  const retailerNotes = sanitizeSourceText(listing.retailerDescription || listing.description);
+
   return (
     <>
       <div className="priority-section">
@@ -1795,7 +1798,7 @@ function InfoSections({ listing, onCompare }: { listing: Listing; onCompare: () 
             <div className="scrape-item"><small>Year</small><b>{listing.year || "Not listed"}</b></div>
             <div className="scrape-item"><small>Included</small><b>{listing.included || "Not listed"}</b></div>
           </div>
-          <div className="scrape-notes"><b>Seller notes</b><br />{listing.conditionNotes || listing.description}</div>
+          {sellerNotes && <div className="scrape-notes"><b>Seller notes</b><br />{sellerNotes}</div>}
         </div>
       </div>
       <div className="priority-section">
@@ -1803,14 +1806,13 @@ function InfoSections({ listing, onCompare }: { listing: Listing; onCompare: () 
         <div className="info-grid">
           <div className="info"><small>Returns</small><b>{listing.returns}</b></div>
           <div className="info"><small>Financing</small><b>{listing.financing}</b></div>
-          <div className="info"><small>Source type</small><b>{listing.sourceType}</b></div>
           <div className="info"><small>Last checked</small><b>{listing.freshness}</b></div>
         </div>
       </div>
       <div className="priority-section">
         <div className="section-head"><div><h2>{uiCopy.listing.aboutListing}</h2></div></div>
         <div className="shop-card"><div className="shop-logo">{listing.logoText || listing.source.slice(0, 2).toUpperCase()}</div><div><b>{listing.source}</b><span>{listing.sourceType} · {listing.location}</span></div></div>
-        <div className="empty" style={{ marginTop: 10 }}>{listing.retailerDescription || listing.description}</div>
+        {retailerNotes && <div className="empty" style={{ marginTop: 10 }}>{retailerNotes}</div>}
         {(listing.sourceType.includes("Forum") || listing.sourceType.includes("Local")) && <div className="notice">Private-sale listing: inspect the guitar carefully, verify the seller, and use safe payment and meetup practices.</div>}
         <button className="cta-secondary" onClick={onCompare} type="button">{uiCopy.listing.addToCompare}</button>
       </div>

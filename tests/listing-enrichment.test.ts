@@ -5,6 +5,8 @@ import {
   extractJsonLdListingMetadata,
   extractPriceFromText,
   isReverbItemPage,
+  mergeListingMetadata,
+  normalizePriceValue,
   ReverbMetadataAdapter
 } from "../src/lib/listing-enrichment";
 
@@ -74,6 +76,16 @@ describe("listing metadata enrichment", () => {
     expect(extractPriceFromText("MSRP: $4,999", "search-rich-result").value).toBeUndefined();
   });
 
+  it("normalizes common international and formatted asking prices", () => {
+    expect(normalizePriceValue("$1,999")).toBe(1999);
+    expect(normalizePriceValue("US $1,999.00")).toBe(1999);
+    expect(normalizePriceValue("£2,499")).toBe(2499);
+    expect(normalizePriceValue("€3.299,00")).toBe(3299);
+    expect(normalizePriceValue("¥450,000")).toBe(450000);
+    expect(normalizePriceValue("$2,000-$3,000")).toBeUndefined();
+    expect(normalizePriceValue("Shipping: $65")).toBeUndefined();
+  });
+
   it("uses generic page metadata for approved retailer sources", async () => {
     let fetches = 0;
     const result = await enrichListingMetadata({
@@ -99,6 +111,127 @@ describe("listing metadata enrichment", () => {
     expect(result.priceLabel).toBe("$4,250");
     expect(result.primaryImage?.source).toBe("twitter-card");
     expect(result.primaryImage?.url).toContain("signature=keep");
+  });
+
+  it("merges search metadata price with Open Graph images instead of choosing one fragment", async () => {
+    const result = await enrichListingMetadata({
+      url: "https://www.sweetwater.com/store/detail/prs-core-merge",
+      title: "PRS Mark Holcomb Core for sale",
+      snippet: "PRS Mark Holcomb Core for sale $4,250"
+    }, {
+      now: 21,
+      fetcher: async () => new Response(`
+        <html><head>
+          <meta property="og:title" content="PRS Mark Holcomb Core">
+          <meta property="og:image" content="https://media.sweetwater.com/prs-core.jpg?signature=keep-this">
+        </head></html>
+      `, { headers: { "content-type": "text/html" } })
+    });
+
+    expect(result.itemPrice).toBe(4250);
+    expect(result.priceLabel).toBe("$4,250");
+    expect(result.primaryImage?.source).toBe("open-graph");
+    expect(result.primaryImage?.url).toContain("signature=keep-this");
+    expect(result.metadataSources).toEqual(expect.arrayContaining(["search-rich-result", "open-graph"]));
+  });
+
+  it("merges JSON-LD price with search thumbnails when the page has no product image", async () => {
+    const result = await enrichListingMetadata({
+      url: "https://reverb.com/item/456-prs-core-no-image",
+      title: "PRS Mark Holcomb Core",
+      thumbnailUrl: "https://imgs.search.brave.com/prs-core-thumb?sig=abc"
+    }, {
+      now: 22,
+      fetcher: async () => new Response(`<script type="application/ld+json">${JSON.stringify({
+        "@type": "Product",
+        name: "PRS Mark Holcomb Core",
+        offers: { "@type": "Offer", price: "4300.00", priceCurrency: "USD" }
+      })}</script>`, { headers: { "content-type": "text/html" } })
+    });
+
+    expect(result.itemPrice).toBe(4300);
+    expect(result.primaryImage?.source).toBe("search-thumbnail");
+    expect(result.primaryImage?.url).toContain("sig=abc");
+    expect(result.metadataSources).toEqual(expect.arrayContaining(["search-rich-result", "source-adapter"]));
+  });
+
+  it("merges adapter images with JSON-LD prices without erasing either field", () => {
+    const result = mergeListingMetadata("https://reverb.com/item/789", [
+      {
+        source: "source-adapter",
+        imageUrls: ["https://rvb-img.reverb.com/image/upload/s--abc--/listing.jpg?signature=keep"],
+        confidence: 0.7
+      },
+      {
+        source: "json-ld",
+        itemPrice: 3999,
+        currency: "USD",
+        confidence: 0.94
+      }
+    ]);
+
+    expect(result.itemPrice).toBe(3999);
+    expect(result.primaryImage?.source).toBe("source-adapter");
+    expect(result.primaryImage?.url).toContain("signature=keep");
+  });
+
+  it("merges adapter prices with Open Graph images without object-spread replacement", () => {
+    const result = mergeListingMetadata("https://reverb.com/item/790", [
+      {
+        source: "source-adapter",
+        itemPrice: 4100,
+        currency: "USD",
+        confidence: 0.95
+      },
+      {
+        source: "open-graph",
+        imageUrls: ["https://images.example.com/listing-no-extension?token=abc"],
+        confidence: 0.55
+      }
+    ]);
+
+    expect(result.itemPrice).toBe(4100);
+    expect(result.primaryImage?.url).toBe("https://images.example.com/listing-no-extension?token=abc");
+  });
+
+  it("does not let later empty page metadata erase earlier search price or image", async () => {
+    const result = await enrichListingMetadata({
+      url: "https://www.sweetwater.com/store/detail/prs-core-empty",
+      title: "PRS Mark Holcomb Core for sale",
+      snippet: "PRS Mark Holcomb Core for sale $4,250",
+      thumbnailUrl: "https://imgs.search.brave.com/prs-core-thumb?sig=keep"
+    }, {
+      now: 23,
+      fetcher: async () => new Response("<html><head><title>Empty product shell</title></head><body></body></html>", { headers: { "content-type": "text/html" } })
+    });
+
+    expect(result.itemPrice).toBe(4250);
+    expect(result.primaryImage?.source).toBe("search-thumbnail");
+    expect(result.primaryImage?.url).toContain("sig=keep");
+  });
+
+  it("collects and deduplicates image candidates from every fragment", async () => {
+    const result = await enrichListingMetadata({
+      url: "https://ish.guitars/products/prs-core-dedupe",
+      title: "PRS Mark Holcomb Core",
+      thumbnailUrl: "https://cdn.shopify.com/s/files/1/prs-core.jpg?v=123"
+    }, {
+      now: 24,
+      fetcher: async () => new Response(`
+        <html><head>
+          <meta property="og:image" content="https://cdn.shopify.com/s/files/1/prs-core.jpg?v=123">
+          <meta name="twitter:image" content="https://cdn.shopify.com/s/files/1/prs-core-alt.jpg?v=456">
+        </head>
+        <script>{"images":["https://cdn.shopify.com/s/files/1/prs-core.jpg?v=123","https://cdn.shopify.com/s/files/1/prs-core-alt.jpg?v=456"]}</script>
+        </html>
+      `, { headers: { "content-type": "text/html" } })
+    });
+
+    expect(result.galleryImages?.map(image => image.url)).toEqual(expect.arrayContaining([
+      "https://cdn.shopify.com/s/files/1/prs-core.jpg?v=123",
+      "https://cdn.shopify.com/s/files/1/prs-core-alt.jpg?v=456"
+    ]));
+    expect(result.galleryImages).toHaveLength(2);
   });
 
   it("extracts microdata prices from approved product pages", async () => {
@@ -140,7 +273,7 @@ describe("listing metadata enrichment", () => {
     expect(result.primaryImage?.source).toBe("embedded-product-json");
   });
 
-  it("does not fetch unknown domains without approval and still keeps search thumbnail fallback", async () => {
+  it("fetches unknown individual retailer domains through the generic pipeline", async () => {
     let fetches = 0;
     const result = await enrichListingMetadata({
       url: "https://shop.example.com/products/prs-core",
@@ -150,14 +283,20 @@ describe("listing metadata enrichment", () => {
     }, {
       fetcher: async () => {
         fetches += 1;
-        return new Response("");
+        return new Response(`
+          <html><head>
+            <meta property="og:image" content="/cdn/listing-image?signature=relative">
+          </head>
+          <script>{"price":"$4,399.00","currency":"USD"}</script>
+          </html>
+        `, { headers: { "content-type": "text/html" } });
       }
     });
 
-    expect(fetches).toBe(0);
-    expect(result.itemPrice).toBe(4250);
-    expect(result.primaryImage?.source).toBe("search-thumbnail");
-    expect(result.rejectionReasons).toContain("metadata-fetch-not-permitted");
+    expect(fetches).toBe(1);
+    expect(result.itemPrice).toBe(4399);
+    expect(result.primaryImage?.source).toBe("open-graph");
+    expect(result.primaryImage?.url).toBe("https://shop.example.com/cdn/listing-image?signature=relative");
   });
 
   it("refresh search bypasses stale enrichment cache", async () => {

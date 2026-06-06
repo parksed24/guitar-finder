@@ -16,6 +16,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Expected a non-empty query." }, { status: 400 });
   }
 
+  const useDemoListings = process.env.USE_DEMO_LISTINGS === "true";
   const [catalogResponse, webSearchResponse] = await Promise.all([
     Promise.resolve(buildFinderResponse(parsed.data.query)),
     searchOpenWebForGuitars(parsed.data.query, { forceRefresh: parsed.data.refresh, cursor: parsed.data.cursor })
@@ -23,6 +24,8 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     ...catalogResponse,
+    listings: useDemoListings ? catalogResponse.listings : [],
+    count: useDemoListings ? catalogResponse.count : 0,
     mode: "web-search",
     webResults: webSearchResponse.webResults,
     webCount: webSearchResponse.count,
