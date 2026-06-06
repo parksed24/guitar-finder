@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, ExternalLink, GitCompare, Heart } from "lucide-react";
 import { notFound } from "next/navigation";
 import { listingDetail } from "@/lib/catalog-presenter";
 import { formatMoney } from "@/lib/money";
@@ -11,108 +10,112 @@ export default async function ListingPage({ params }: { params: Promise<{ id: st
   if (!detail) notFound();
 
   const { listing, all, index, previous, next } = detail;
+  const checkedDate = new Date(listing.checkedTimestamp).toLocaleDateString("en-US");
 
   return (
-    <main className="shell">
-      <header className="detail-topbar">
-        <div className="brand">
-          <div className="brand-mark">GF</div>
-          <div>
-            <h1>Guitar Finder</h1>
-            <p>{index + 1} of {all.length}</p>
-          </div>
-        </div>
-        <Link className="secondary-button" href="/">
-          <ArrowLeft size={17} />
-          Back to Results
-        </Link>
-      </header>
-
-      <section className="detail-grid">
-        <div>
-          <div className="detail-image">
-            <img src={listing.imageUrl} alt="" />
-            <div className="overlay-actions">
-              <button className="icon-button" aria-label="Save listing" title="Save listing" type="button">
-                <Heart size={16} />
-              </button>
-              <button className="icon-button" aria-label="Compare listing" title="Compare listing" type="button">
-                <GitCompare size={16} />
-              </button>
+    <main className="page">
+      <div className="phone">
+        <div className="screen">
+          <div className="topbar">
+            <Link className="brand" href="/">
+              Guitar <span>Finder</span>
+            </Link>
+            <div className="top-actions">
+              <Link className="icon-btn home-icon" aria-label="Home" href="/">⌂</Link>
+              <Link className="icon-btn" aria-label="Saved searches" href="/">♡</Link>
+              <Link className="icon-btn account-icon" aria-label="Account" href="/">♙</Link>
             </div>
           </div>
-          <div className="gallery-controls">
-            <button className="secondary-button" type="button">Previous Photo</button>
-            <span className="tag">1 of 3</span>
-            <button className="secondary-button" type="button">Next Photo</button>
+
+          <div className="content">
+            <div className="listing-toolbar">
+              <Link className="back-results" href="/">← Back to results</Link>
+              <div className="pager">
+                {previous ? <Link className="pager-btn" href={`/listings/${previous.id}`}>‹</Link> : <span className="pager-btn" aria-disabled="true">‹</span>}
+                <div className="pager-count">{index + 1} of {all.length}</div>
+                {next ? <Link className="pager-btn" href={`/listings/${next.id}`}>›</Link> : <span className="pager-btn" aria-disabled="true">›</span>}
+              </div>
+              <div className="toolbar-spacer" />
+            </div>
+
+            <section className="product-hero">
+              <div className="pad">
+                <div className="retailer">{listing.sourceName}</div>
+                <div className="product-title-row">
+                  <div>
+                    <h2 style={{ marginTop: 6 }}>{listing.title}</h2>
+                    <p>Checked {checkedDate} from {listing.seller}.</p>
+                  </div>
+                  <span className="condition-pill">{listing.condition}</span>
+                </div>
+              </div>
+            </section>
+
+            <div className="gallery-wrap">
+              <div className="gallery-main">
+                <img src={listing.imageUrl} alt={listing.title} />
+                <button className="gallery-arrow prev" type="button" aria-label="Previous photo">‹</button>
+                <button className="gallery-arrow next" type="button" aria-label="Next photo">›</button>
+                <div className="gallery-counter">1 / 1</div>
+              </div>
+              <div className="gallery">
+                <button className="thumb active" type="button">
+                  <img src={listing.imageUrl} alt={`${listing.title} photo 1`} />
+                </button>
+              </div>
+            </div>
+
+            <div className="checkout-card">
+              <div className="checkout-kicker">Total estimated cost</div>
+              <div className="checkout-main">
+                <div>
+                  <div className="checkout-total">{formatMoney(listing.totalEstimatedCost)}</div>
+                  <div className="checkout-note">Includes instrument, shipping, estimated tax, and import duty.</div>
+                </div>
+              </div>
+              <details className="inline-breakdown" open>
+                <summary className="cost-toggle">Cost breakdown</summary>
+                <div className="receipt-row"><span>Instrument price</span><span>{formatMoney(listing.itemPrice)}</span></div>
+                <div className="receipt-row"><span>Shipping</span><span>{formatMoney(listing.shipping)}</span></div>
+                <div className="receipt-row"><span>Estimated sales tax</span><span>{formatMoney(listing.estimatedSalesTax)}</span></div>
+                <div className="receipt-row"><span>Estimated import duty</span><span>{formatMoney(listing.estimatedImportDuty)}</span></div>
+                <div className="receipt-row total"><span>Total estimated cost</span><span>{formatMoney(listing.totalEstimatedCost)}</span></div>
+              </details>
+              <a className="checkout-cta" href={listing.sourceUrl}>Open on {listing.sourceName}</a>
+              <div className="checkout-secondary"><span>{listing.sellerType} · {listing.condition}</span></div>
+            </div>
+
+            <div className="priority-section">
+              <div className="section-head"><div><h2>Listing details</h2></div></div>
+              <div className="info-grid">
+                <div className="info"><small>Source</small><b>{listing.sourceName}</b></div>
+                <div className="info"><small>Seller type</small><b>{listing.sellerType}</b></div>
+                <div className="info"><small>Seller</small><b>{listing.seller}</b></div>
+                <div className="info"><small>Last checked</small><b>{checkedDate}</b></div>
+              </div>
+            </div>
+
+            <div className="priority-section">
+              <div className="section-head"><div><h2>Purchase details</h2></div></div>
+              <div className="info-grid">
+                <div className="info"><small>Item price</small><b>{formatMoney(listing.itemPrice)}</b></div>
+                <div className="info"><small>Shipping</small><b>{formatMoney(listing.shipping)}</b></div>
+                <div className="info"><small>Sales tax</small><b>{formatMoney(listing.estimatedSalesTax)}</b></div>
+                <div className="info"><small>Import duty</small><b>{formatMoney(listing.estimatedImportDuty)}</b></div>
+              </div>
+            </div>
+
+            <div className="priority-section">
+              <div className="section-head"><div><h2>About this listing</h2></div></div>
+              <div className="shop-card">
+                <div className="shop-logo">{listing.sourceName.slice(0, 2).toUpperCase()}</div>
+                <div><b>{listing.sourceName}</b><span>{listing.sellerType} · {listing.seller}</span></div>
+              </div>
+              <button className="cta-secondary" type="button">Add to compare</button>
+            </div>
           </div>
         </div>
-
-        <div className="detail-copy">
-          <div>
-            <div className="tag-row">
-              <span className="tag">{listing.sourceName}</span>
-              <span className="tag">{listing.condition}</span>
-              <span className="tag">{listing.sellerType}</span>
-            </div>
-            <h1>{listing.title}</h1>
-            <p>Checked {new Date(listing.checkedTimestamp).toLocaleDateString("en-US")} from {listing.seller}.</p>
-          </div>
-
-          <div className="cost-block">
-            <div className="total-cost">
-              <span>Total estimated cost</span>
-              <strong>{formatMoney(listing.totalEstimatedCost)}</strong>
-            </div>
-            <details className="breakdown">
-              <summary>Cost breakdown</summary>
-              <dl>
-                <div>
-                  <dt>Item price</dt>
-                  <dd>{formatMoney(listing.itemPrice)}</dd>
-                </div>
-                <div>
-                  <dt>Shipping</dt>
-                  <dd>{formatMoney(listing.shipping)}</dd>
-                </div>
-                <div>
-                  <dt>Estimated sales tax</dt>
-                  <dd>{formatMoney(listing.estimatedSalesTax)}</dd>
-                </div>
-                <div>
-                  <dt>Estimated import duty</dt>
-                  <dd>{formatMoney(listing.estimatedImportDuty)}</dd>
-                </div>
-              </dl>
-            </details>
-          </div>
-
-          <a className="primary-button" href={listing.sourceUrl}>
-            Open on {listing.sourceName}
-            <ExternalLink size={17} />
-          </a>
-
-          <nav className="detail-nav" aria-label="Listing navigation">
-            {previous ? (
-              <Link className="secondary-button" href={`/listings/${previous.id}`}>
-                <ArrowLeft size={17} />
-                Previous
-              </Link>
-            ) : (
-              <span />
-            )}
-            <span className="tag">{index + 1} of {all.length}</span>
-            {next ? (
-              <Link className="secondary-button" href={`/listings/${next.id}`}>
-                Next
-                <ArrowRight size={17} />
-              </Link>
-            ) : (
-              <span />
-            )}
-          </nav>
-        </div>
-      </section>
+      </div>
     </main>
   );
 }
