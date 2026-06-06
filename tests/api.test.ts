@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { POST as advisorPost } from "../src/app/api/advisor/recommend/route";
 import { POST as finderPost } from "../src/app/api/finder/search/route";
 import { GET as healthGet } from "../src/app/api/health/route";
@@ -14,6 +14,10 @@ function jsonRequest(body: unknown) {
 }
 
 describe("API route integration", () => {
+  afterEach(() => {
+    delete process.env.USE_DEMO_LISTINGS;
+  });
+
   it("reports health", async () => {
     const response = await healthGet();
     const body = await response.json();
@@ -23,6 +27,7 @@ describe("API route integration", () => {
   });
 
   it("returns exact PRS Core listings without SE substitutions", async () => {
+    process.env.USE_DEMO_LISTINGS = "true";
     const response = await finderPost(jsonRequest({ query: "PRS Holcomb Core Cobalt Smokeburst" }));
     const body = await response.json();
 
@@ -35,6 +40,7 @@ describe("API route integration", () => {
   });
 
   it("returns exact Fender Custom Shop listings without Vintera substitutions", async () => {
+    process.env.USE_DEMO_LISTINGS = "true";
     const response = await finderPost(jsonRequest({ query: "Fender Custom Shop 1963 Stratocaster Sonic Blue" }));
     const body = await response.json();
 
@@ -54,6 +60,16 @@ describe("API route integration", () => {
     expect(response.status).toBe(200);
     expect(body.interpretedProduct).toBeNull();
     expect(body.listings).toHaveLength(0);
+  });
+
+  it("keeps seed catalog demo listings out of production responses by default", async () => {
+    const response = await finderPost(jsonRequest({ query: "PRS Holcomb Core Cobalt Smokeburst" }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.interpretedProduct.modelId).toBe("prs-holcomb-core-cobalt");
+    expect(body.listings).toHaveLength(0);
+    expect(body.count).toBe(0);
   });
 
   it("returns constrained Misha seven-string advisor recommendations", async () => {

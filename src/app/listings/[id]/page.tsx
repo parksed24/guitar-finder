@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { listingDetail } from "@/lib/catalog-presenter";
 import { formatMoney } from "@/lib/money";
+import { sanitizeSourceText } from "@/lib/source-text";
 
 export default async function ListingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -11,6 +12,7 @@ export default async function ListingPage({ params }: { params: Promise<{ id: st
 
   const { listing, all, index, previous, next } = detail;
   const checkedDate = new Date(listing.checkedTimestamp).toLocaleDateString("en-US");
+  const aboutNotes = sanitizeSourceText(`${listing.seller} · ${listing.condition}`);
 
   return (
     <main className="page">
@@ -44,7 +46,7 @@ export default async function ListingPage({ params }: { params: Promise<{ id: st
                 <div className="product-title-row">
                   <div>
                     <h2 style={{ marginTop: 6 }}>{listing.title}</h2>
-                    <p>Checked {checkedDate} from {listing.seller}.</p>
+                    <p>{listing.condition} · Checked {checkedDate}</p>
                   </div>
                   <span className="condition-pill">{listing.condition}</span>
                 </div>
@@ -86,30 +88,15 @@ export default async function ListingPage({ params }: { params: Promise<{ id: st
             </div>
 
             <div className="priority-section">
-              <div className="section-head"><div><h2>Listing details</h2></div></div>
-              <div className="info-grid">
-                <div className="info"><small>Source</small><b>{listing.sourceName}</b></div>
-                <div className="info"><small>Seller type</small><b>{listing.sellerType}</b></div>
-                <div className="info"><small>Seller</small><b>{listing.seller}</b></div>
-                <div className="info"><small>Last checked</small><b>{checkedDate}</b></div>
-              </div>
-            </div>
-
-            <div className="priority-section">
-              <div className="section-head"><div><h2>Purchase details</h2></div></div>
-              <div className="info-grid">
-                <div className="info"><small>Item price</small><b>{formatMoney(listing.itemPrice)}</b></div>
-                <div className="info"><small>Shipping</small><b>{formatMoney(listing.shipping)}</b></div>
-                <div className="info"><small>Sales tax</small><b>{formatMoney(listing.estimatedSalesTax)}</b></div>
-                <div className="info"><small>Import duty</small><b>{formatMoney(listing.estimatedImportDuty)}</b></div>
-              </div>
-            </div>
-
-            <div className="priority-section">
               <div className="section-head"><div><h2>About this listing</h2></div></div>
               <div className="shop-card">
                 <div className="shop-logo">{listing.sourceName.slice(0, 2).toUpperCase()}</div>
-                <div><b>{listing.sourceName}</b><span>{listing.sellerType} · {listing.seller}</span></div>
+                <div><b>{listing.sourceName}</b><span>{listing.seller}</span></div>
+              </div>
+              {aboutNotes && <div className="empty" style={{ marginTop: 10 }}>{aboutNotes}</div>}
+              <div className="info-grid" style={{ marginTop: 12 }}>
+                <div className="info"><small>Condition</small><b>{listing.condition}</b></div>
+                <div className="info"><small>Last checked</small><b>{checkedDate}</b></div>
               </div>
               <button className="cta-secondary" type="button">Add to compare</button>
             </div>

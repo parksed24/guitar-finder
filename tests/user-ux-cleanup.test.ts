@@ -14,6 +14,7 @@ describe("customer-facing cleanup", () => {
 
   it("does not show match-confidence clutter in cards or web listing details", () => {
     const code = clientCode();
+    const routeCode = readFileSync("src/app/listings/[id]/page.tsx", "utf8");
     const gridCard = code.slice(code.indexOf("function ListingCard"), code.indexOf("function ListingListCard"));
     const listCard = code.slice(code.indexOf("function ListingListCard"), code.indexOf("function SourcePlaceholder"));
     const webDetails = code.slice(code.indexOf("function InfoSections"), code.indexOf("function AdvisorView"));
@@ -24,6 +25,9 @@ describe("customer-facing cleanup", () => {
     expect(listCard).not.toContain("possibleMatch");
     expect(webDetails).not.toContain("<small>Domain</small>");
     expect(webDetails).not.toContain("<small>Match</small>");
+    expect(routeCode).not.toContain("<small>Source</small>");
+    expect(routeCode).not.toContain("<small>Domain</small>");
+    expect(routeCode).not.toContain("<small>Match</small>");
   });
 
   it("uses shopper-facing fallback copy for missing prices", () => {
