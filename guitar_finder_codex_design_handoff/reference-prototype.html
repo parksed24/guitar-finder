@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>Guitar Finder — Listing Pages Prototype</title>
+<style>
+:root{
+  --bg:#0b1117;--panel:#101820;--panel2:#14202a;--panel3:#182732;--line:rgba(255,255,255,.09);
+  --muted:#8da1b1;--text:#f3f7fa;--accent:#36d0b7;--accent2:#77e6d4;--chip:#1b2a35;
+  --warn:#f5c36f;--danger:#ff9a9a;--white:#fff;--shadow:0 18px 44px rgba(0,0,0,.28)
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(180deg,#0b1117,#0e1720);color:var(--text)}
+button,input{font:inherit}button{cursor:pointer}.page{min-height:100vh;padding:24px;display:flex;justify-content:center}
+.phone{width:410px;max-width:100%;background:#05090d;border:1px solid rgba(255,255,255,.08);border-radius:34px;padding:10px;box-shadow:0 30px 90px rgba(0,0,0,.45)}
+.screen{min-height:860px;border-radius:26px;overflow:hidden;background:var(--bg);position:relative}
+.topbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;padding:18px 16px 12px;background:rgba(11,17,23,.94);backdrop-filter:blur(18px);border-bottom:1px solid rgba(255,255,255,.05)}
+.brand{font-size:14px;font-weight:900;letter-spacing:.14em;text-transform:uppercase}.brand span{color:var(--accent)}
+.top-actions{display:flex;gap:8px}.icon-btn{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:var(--panel2);border:1px solid var(--line);color:var(--text);font-weight:900}
+.content{padding:14px 14px 92px}.hero{border-radius:22px;background:linear-gradient(135deg,#132530,#101b24);border:1px solid var(--line);padding:16px}
+h1{margin:0;font-size:28px;line-height:1.05;letter-spacing:-.04em}.hero p{margin:8px 0 0;color:var(--muted);font-size:13px;line-height:1.5}
+.search{margin-top:14px;display:flex;align-items:center;gap:10px;background:#0e171f;border:1px solid rgba(255,255,255,.11);border-radius:16px;padding:12px}
+.search input{flex:1;min-width:0;background:transparent;border:0;outline:0;color:var(--text);font-size:14px;font-weight:700}
+.search-btn{border:0;background:var(--accent);color:#06211d;font-weight:900;border-radius:12px;padding:10px 12px}
+.advisor{margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 13px;border-radius:16px;background:rgba(102,169,255,.08);border:1px solid rgba(102,169,255,.18);color:#d7e9ff;font-size:12px;font-weight:800}.advisor b{color:#fff}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:18px 0 10px}.section-head h2{margin:0;font-size:18px}.sub{font-size:12px;color:var(--muted);font-weight:700}
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 0 2px}
+.chips{display:flex;gap:7px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}.chip{flex:none;border:1px solid var(--line);background:var(--chip);color:#c8d5de;border-radius:999px;padding:8px 10px;font-size:11px;font-weight:900}.chip.active{background:rgba(54,208,183,.16);color:var(--accent2);border-color:rgba(54,208,183,.35)}
+.toggle{display:flex;gap:4px;background:#0e171f;border:1px solid var(--line);border-radius:999px;padding:4px}.toggle button{border:0;background:transparent;color:var(--muted);width:38px;height:30px;border-radius:999px;font-weight:900}.toggle button.active{background:var(--panel3);color:var(--accent)}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.list{display:grid;grid-template-columns:1fr;gap:10px}
+.card{overflow:hidden;border-radius:18px;background:var(--panel);border:1px solid var(--line);box-shadow:0 8px 20px rgba(0,0,0,.16);position:relative}
+.card:hover{border-color:rgba(54,208,183,.35)}.card-main{display:block;text-decoration:none;color:inherit}
+.image{position:relative;aspect-ratio:1/1;background:#1c2831;overflow:hidden}.image img{width:100%;height:100%;object-fit:cover;display:block}
+.image-actions{position:absolute;right:7px;top:7px;display:flex;gap:5px}.image-action{width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,.14);background:rgba(5,9,13,.82);backdrop-filter:blur(10px);color:#fff;display:grid;place-items:center;font-size:13px;font-weight:900}
+.image-action.active{background:rgba(54,208,183,.22);color:var(--accent2);border-color:rgba(54,208,183,.55)}
+.body{padding:10px}.retailer{font-size:11px;font-weight:950;color:var(--accent2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.title{margin-top:4px;font-size:14px;line-height:1.28;font-weight:900;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:36px}
+.meta{margin-top:5px;color:var(--muted);font-size:10px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.price{margin-top:9px;font-size:21px;line-height:1;font-weight:950;color:#f7fbfd;letter-spacing:-.04em}.price small{font-size:10px;color:var(--muted);font-weight:800;letter-spacing:0}
+.tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px}.tag{border-radius:999px;background:#1c2d37;color:#c8d8e2;padding:5px 7px;font-size:9px;font-weight:900}.tag.good{background:rgba(54,208,183,.12);color:var(--accent2)}.tag.warn{background:rgba(245,195,111,.12);color:#f8d18f}
+.seller-row{margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;gap:8px;font-size:10px;color:var(--muted);font-weight:800}
+.card-actions{padding:0 10px 10px}.direct{display:block;width:100%;text-align:center;text-decoration:none;border:0;border-radius:12px;background:var(--accent);color:#06211d;font-weight:900;font-size:11px;padding:10px}
+.list-card{display:grid;grid-template-columns:116px minmax(0,1fr)}.list-card .image{aspect-ratio:auto;min-height:152px}.list-card .body{padding:12px}.list-card .title{font-size:16px;min-height:auto}.list-card .price{font-size:24px}.list-card .card-actions{grid-column:1/-1}
+.breakdown{display:none;margin-top:8px;color:var(--muted);font-size:10px;font-weight:750}.list-card .breakdown{display:block}
+.footer{padding:20px 0 4px;color:var(--muted);font-size:11px;line-height:1.5}.empty{padding:16px;border:1px solid var(--line);border-radius:18px;background:var(--panel);color:var(--muted);font-size:13px;line-height:1.5}
+.page-view{display:none}.page-view.open{display:block}.page-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}.back{border:1px solid var(--line);background:#14202a;color:#fff;border-radius:50%;width:38px;height:38px;font-weight:900}
+.product-hero{border-radius:20px;overflow:hidden;background:#101820;border:1px solid var(--line)}.product-hero img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}.product-hero .pad{padding:14px}.product-hero h2{margin:0;font-size:24px;letter-spacing:-.03em}.product-hero p{margin:5px 0 0;color:var(--muted);font-size:12px;line-height:1.5}
+.gallery-wrap{margin-top:12px}.gallery-main{position:relative;overflow:hidden;border-radius:18px;background:#1c2831;border:1px solid var(--line)}.gallery-main img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}.gallery-arrow{position:absolute;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,.18);background:rgba(5,9,13,.72);color:#fff;display:grid;place-items:center;font-size:18px;font-weight:900;backdrop-filter:blur(10px)}.gallery-arrow.prev{left:10px}.gallery-arrow.next{right:10px}.gallery-counter{position:absolute;right:10px;bottom:10px;border-radius:999px;background:rgba(5,9,13,.78);padding:6px 9px;color:#fff;font-size:10px;font-weight:900;border:1px solid rgba(255,255,255,.12)}.gallery{display:flex;gap:8px;overflow-x:auto;margin-top:10px;scrollbar-width:none}.thumb{width:62px;height:62px;flex:none;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:#1c2831;padding:0}.thumb.active{border-color:rgba(54,208,183,.65);box-shadow:0 0 0 2px rgba(54,208,183,.14)}.thumb img{width:100%;height:100%;object-fit:cover}
+.scrape-card{margin-top:12px;padding:13px;border-radius:16px;background:#101820;border:1px solid var(--line)}.scrape-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.scrape-head b{font-size:13px}.scrape-head span{font-size:10px;color:var(--accent2);font-weight:900}.scrape-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}.scrape-item{padding:10px;border-radius:12px;background:#14202a;border:1px solid rgba(255,255,255,.06)}.scrape-item small{display:block;color:var(--muted);font-size:10px;font-weight:800}.scrape-item b{display:block;margin-top:3px;font-size:13px;line-height:1.35}.scrape-notes{margin-top:10px;padding:10px;border-radius:12px;background:#14202a;border:1px solid rgba(255,255,255,.06);font-size:12px;line-height:1.55;color:#c7d4dc}.scrape-source{margin-top:8px;font-size:10px;color:var(--muted);line-height:1.45}
+.info-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}.info{padding:10px;border-radius:14px;background:#14202a;border:1px solid var(--line)}.info small{display:block;color:var(--muted);font-size:10px;font-weight:800}.info b{display:block;margin-top:3px;font-size:14px}
+.checkout-card{margin-top:14px;padding:14px;border-radius:18px;border:1px solid rgba(54,208,183,.28);background:linear-gradient(135deg,rgba(54,208,183,.12),rgba(20,32,42,.96));box-shadow:0 12px 28px rgba(0,0,0,.18)}
+.checkout-kicker{font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--accent2)}
+.checkout-main{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-top:7px}
+.checkout-total{font-size:30px;line-height:1;font-weight:950;letter-spacing:-.05em;color:#f7fbfd}
+.checkout-note{margin-top:5px;color:var(--muted);font-size:11px;line-height:1.45}
+.checkout-cta{display:block;width:100%;margin-top:12px;text-align:center;text-decoration:none;border-radius:14px;background:var(--accent);color:#06211d;font-weight:950;padding:13px}
+.checkout-secondary{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;color:#c7d4dc;font-size:11px;font-weight:800}
+.inline-breakdown{margin-top:12px;border-top:1px solid rgba(255,255,255,.10);padding-top:10px}
+.inline-breakdown.collapsed{display:none}
+.inline-breakdown .receipt-row{padding:8px 0}
+.inline-breakdown .receipt-row.total{margin-top:2px;padding-top:10px}
+.cost-toggle{display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(255,255,255,.11);background:#14202a;color:var(--accent2);border-radius:999px;padding:8px 10px;font-size:11px;font-weight:950}
+.cost-toggle .chev{font-size:12px;line-height:1}
+
+.product-title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.condition-pill{flex:none;border-radius:999px;background:rgba(54,208,183,.14);border:1px solid rgba(54,208,183,.28);padding:6px 9px;color:var(--accent2);font-size:10px;font-weight:950}
+.shop-card{display:flex;align-items:center;gap:12px;margin-top:12px;padding:12px;border-radius:16px;background:#101820;border:1px solid var(--line)}
+.shop-logo{width:52px;height:52px;display:grid;place-items:center;flex:none;border-radius:14px;background:#182732;border:1px solid rgba(255,255,255,.08);color:var(--accent2);font-size:16px;font-weight:950;letter-spacing:.04em;overflow:hidden}
+.shop-logo img{width:100%;height:100%;object-fit:contain;background:white}
+.shop-card b{display:block;font-size:14px}.shop-card span{display:block;margin-top:3px;color:var(--muted);font-size:11px;line-height:1.4}
+.priority-section{margin-top:16px}.priority-section .section-head{margin:0 0 10px}
+
+.receipt-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 13px;border-bottom:1px solid var(--line);background:#14202a}
+.receipt-head b{font-size:13px}.receipt-head span{font-size:10px;color:var(--muted);font-weight:800}
+.receipt-lines{padding:5px 13px}.receipt-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;color:#d8e5ec;font-size:12px;font-weight:750;border-bottom:1px dashed rgba(255,255,255,.09)}
+.receipt-row:last-child{border-bottom:0}.receipt-row span:last-child{font-weight:900;color:#f4f8fa}.receipt-row.muted{color:var(--muted)}.receipt-row.total{margin-top:3px;padding:12px 0;font-size:16px;color:#fff;border-top:1px solid var(--line);border-bottom:0}.receipt-row.total span:last-child{font-size:20px;color:var(--accent2)}
+.listing-toolbar{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;margin-bottom:14px}
+.back-results{border:1px solid rgba(54,208,183,.28);background:rgba(54,208,183,.12);color:var(--accent2);border-radius:12px;padding:10px 12px;font-size:11px;font-weight:950}
+.pager{display:flex;align-items:center;justify-content:center;gap:8px}
+.pager-btn{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:#14202a;color:#e6eef2;font-size:16px;font-weight:950}
+.pager-btn:disabled{opacity:.35;cursor:not-allowed}
+.pager-count{min-width:44px;text-align:center;color:var(--muted);font-size:12px;font-weight:900}
+.toolbar-spacer{width:1px}
+.listing-transition-next{animation:listingSlideNext .26s ease-out}
+.listing-transition-prev{animation:listingSlidePrev .26s ease-out}
+@keyframes listingSlideNext{0%{opacity:.55;transform:translateX(14px)}100%{opacity:1;transform:translateX(0)}}
+@keyframes listingSlidePrev{0%{opacity:.55;transform:translateX(-14px)}100%{opacity:1;transform:translateX(0)}}
+
+.cta-wide{display:block;text-decoration:none;text-align:center;margin-top:14px;border-radius:14px;background:var(--accent);color:#06211d;font-weight:900;padding:13px}.cta-secondary{display:block;text-align:center;margin-top:9px;border-radius:14px;background:#14202a;color:#dbe7ee;border:1px solid var(--line);font-weight:900;padding:12px}
+.notice{margin-top:12px;padding:12px;border-radius:14px;border:1px solid rgba(245,195,111,.2);background:rgba(245,195,111,.08);color:#f6d898;font-size:11px;line-height:1.5}
+.compare-tray{position:fixed;z-index:55;left:50%;transform:translateX(-50%);bottom:16px;width:min(382px,calc(100% - 34px));display:none;align-items:center;justify-content:space-between;gap:10px;background:#14202a;border:1px solid rgba(54,208,183,.32);border-radius:16px;padding:10px 12px;box-shadow:0 18px 34px rgba(0,0,0,.4)}
+.compare-tray.open{display:flex}.compare-tray b{font-size:12px}.compare-tray span{font-size:11px;color:var(--muted)}.compare-btn{border:0;background:var(--accent);color:#06211d;border-radius:10px;padding:9px 11px;font-size:11px;font-weight:900}
+.overlay{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.68);backdrop-filter:blur(8px);display:none;align-items:flex-end;justify-content:center}.overlay.open{display:flex}.sheet{width:min(410px,100%);max-height:88vh;overflow-y:auto;background:#0e171f;border:1px solid var(--line);border-radius:24px 24px 0 0;padding:16px;box-shadow:0 -18px 44px rgba(0,0,0,.35)}
+.sheet-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.sheet h2{margin:0;font-size:22px;letter-spacing:-.03em}.sheet p{margin:5px 0 0;color:var(--muted);font-size:12px;line-height:1.5}.close{border:0;background:#1b2a35;color:#fff;width:38px;height:38px;border-radius:50%;font-weight:900}.compare-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}.compare-card{background:#14202a;border:1px solid var(--line);border-radius:14px;padding:9px}.compare-card h3{font-size:13px;margin:0}.compare-card p{font-size:11px;color:var(--muted);margin:4px 0 0}
+.advisor-shell{border-radius:20px;background:#101820;border:1px solid var(--line);overflow:hidden}
+.advisor-cover{padding:16px;background:linear-gradient(135deg,#16333b,#101820)}
+.advisor-cover h2{margin:0;font-size:26px;line-height:1.05;letter-spacing:-.04em}
+.advisor-cover p{margin:8px 0 0;color:var(--muted);font-size:13px;line-height:1.5}
+.progress{display:flex;gap:6px;margin-top:14px}.progress span{height:4px;flex:1;border-radius:99px;background:rgba(255,255,255,.12)}.progress span.active{background:var(--accent)}
+.advisor-body{padding:14px}.advisor-label{font-size:11px;font-weight:950;letter-spacing:.11em;text-transform:uppercase;color:var(--accent2)}
+.advisor-question{margin-top:5px;font-size:20px;font-weight:950;letter-spacing:-.03em}
+.choice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}.choice{border:1px solid var(--line);background:#14202a;color:#dce7ec;border-radius:14px;padding:12px;text-align:left;font-size:12px;font-weight:900}.choice.active{background:rgba(54,208,183,.14);color:var(--accent2);border-color:rgba(54,208,183,.38)}
+.advisor-input{margin-top:12px;width:100%;border:1px solid var(--line);background:#0e171f;color:#fff;border-radius:14px;padding:12px;font-size:13px;font-weight:750;outline:0}
+.advisor-actions{display:flex;gap:8px;margin-top:16px}.advisor-actions button{flex:1;border-radius:14px;padding:12px;font-size:12px;font-weight:950}.advisor-next{border:0;background:var(--accent);color:#06211d}.advisor-back{border:1px solid var(--line);background:#14202a;color:#dce7ec}
+.advisor-stepper{display:flex;gap:6px;margin-top:14px;overflow-x:auto;scrollbar-width:none}.advisor-stepper button{flex:1;min-width:44px;border:0;border-radius:999px;background:rgba(255,255,255,.09);color:var(--muted);padding:6px 7px;font-size:10px;font-weight:900}.advisor-stepper button.active{background:var(--accent);color:#06211d}.advisor-stepper button.done{background:rgba(54,208,183,.16);color:var(--accent2)}
+.custom-budget{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.custom-budget label{display:block;color:var(--muted);font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em}.custom-budget input{margin-top:5px;width:100%;border:1px solid var(--line);background:#0e171f;color:#fff;border-radius:12px;padding:10px;font-size:13px;font-weight:800;outline:0}
+.helper{margin-top:8px;color:var(--muted);font-size:11px;line-height:1.45}
+.recommendation{margin-top:14px;padding:14px;border-radius:16px;background:linear-gradient(135deg,rgba(54,208,183,.12),rgba(20,32,42,.96));border:1px solid rgba(54,208,183,.26)}
+.recommendation h3{margin:0;font-size:20px;letter-spacing:-.03em}.recommendation p{margin:7px 0 0;color:var(--muted);font-size:12px;line-height:1.5}
+.recommendation-cta{display:flex;align-items:center;justify-content:space-between;width:100%;margin-top:12px;border:0;border-radius:14px;background:var(--accent);color:#06211d;padding:13px 14px;font-size:12px;font-weight:950}
+.advisor-summary{margin-top:12px;padding:11px;border-radius:14px;background:#14202a;border:1px solid var(--line);font-size:11px;line-height:1.55;color:var(--muted)}
+.advisor-summary b{color:#e8f0f4}
+.result-list{display:grid;gap:10px;margin-top:12px}
+.result-card{padding:12px;border-radius:16px;background:#14202a;border:1px solid var(--line)}
+.result-card.best{background:linear-gradient(135deg,rgba(54,208,183,.13),rgba(20,32,42,.96));border-color:rgba(54,208,183,.3)}
+.result-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.result-label{font-size:10px;font-weight:950;letter-spacing:.10em;text-transform:uppercase;color:var(--accent2)}
+.result-price{flex:none;color:#e7f3f6;font-size:12px;font-weight:950}
+.result-card h3{margin:5px 0 0;font-size:16px;line-height:1.25;letter-spacing:-.02em}
+.result-card p{margin:7px 0 0;color:var(--muted);font-size:11px;line-height:1.5}
+.result-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
+.result-tag{padding:5px 7px;border-radius:999px;background:rgba(54,208,183,.10);color:var(--accent2);font-size:9px;font-weight:900}
+.result-card .recommendation-cta{margin-top:10px;padding:11px 12px}
+.edit-answers{display:flex;align-items:center;justify-content:center;width:100%;margin-top:10px;border:1px solid var(--line);background:#14202a;color:#dce7ec;border-radius:14px;padding:12px;font-size:12px;font-weight:950}
+
+/* Modern Apple Store-inspired visual layer */
+:root{
+  --bg:#f5f5f7;--panel:#fff;--panel2:#fff;--panel3:#eef1f4;
+  --line:rgba(15,23,42,.08);--muted:#6b7280;--text:#111827;
+  --accent:#0071e3;--accent2:#0a84ff;--chip:#eef2f7;--warn:#a16207;
+  --shadow:0 10px 28px rgba(15,23,42,.07)
+}
+body{background:linear-gradient(180deg,#f5f5f7,#edf1f4);color:var(--text)}
+.page{padding:20px}.phone{width:420px;background:#111827;border:0;border-radius:36px;padding:9px;box-shadow:0 28px 80px rgba(15,23,42,.18)}
+.screen{background:#f7f8fa;border-radius:28px}
+.topbar{padding:18px 18px 14px;background:rgba(255,255,255,.88);border-bottom:1px solid rgba(15,23,42,.06)}
+.brand{color:#111827;letter-spacing:.09em;font-size:13px}.brand span{color:var(--accent)}
+.icon-btn,.top-icon{background:#f1f4f7;border:1px solid rgba(15,23,42,.06);color:#111827}
+.content{padding:16px 16px 94px}
+.hero{padding:20px;border-radius:24px;background:#fff;border:1px solid rgba(15,23,42,.06);box-shadow:0 8px 24px rgba(15,23,42,.06)}
+.hero h1{color:#111827;font-size:31px;letter-spacing:-.055em}.hero p{color:#6b7280}
+.search{margin-top:16px;background:#f3f5f7;border:1px solid rgba(15,23,42,.06);border-radius:16px}.search input{color:#111827}
+.search-btn,.direct,.checkout-cta,.advisor-next,.recommendation-cta,.compare-btn{background:#0071e3;color:#fff;box-shadow:none}
+.advisor{background:#f4f8ff;border:1px solid rgba(0,113,227,.12);color:#24537d}.advisor b{color:#0f172a}
+.section-head{margin:22px 0 11px}.section-head h2{font-size:20px;color:#111827;letter-spacing:-.035em}.sub{color:#7b8491}
+.chip{background:#edf1f5;color:#596273;border:1px solid rgba(15,23,42,.05)}.chip.active{background:#111827;color:#fff;border-color:#111827}
+.toggle{background:#edf1f5;border:1px solid rgba(15,23,42,.05)}.toggle button{color:#87909b}.toggle button.active{background:#fff;color:#111827;box-shadow:0 2px 6px rgba(15,23,42,.08)}
+.grid,.list{gap:12px}.card{background:#fff;border:1px solid rgba(15,23,42,.06);border-radius:20px;box-shadow:0 5px 16px rgba(15,23,42,.05)}
+.card:hover{border-color:rgba(0,113,227,.22)}.image{background:#eef1f4}
+.image-action{background:rgba(255,255,255,.88);color:#111827;border:1px solid rgba(15,23,42,.06)}.image-action.active{background:#0071e3;color:#fff;border-color:#0071e3}
+.body{padding:12px}.retailer{color:#0071e3;font-size:10px;letter-spacing:.04em;text-transform:uppercase}.title{color:#111827;font-size:15px}.meta,.seller-row,.breakdown{color:#7b8491}
+.price{color:#111827;font-size:22px}.price small{color:#8b95a1}.tag{background:#f0f3f6;color:#667085}.tag.good{background:#eff8f3;color:#26734d}.tag.warn{background:#fff7e8;color:#956300}
+.seller-row{border-top:1px solid rgba(15,23,42,.05)}.direct{border-radius:12px;padding:11px}.footer{color:#8b95a1}.empty{background:#fff;border:1px solid rgba(15,23,42,.06);color:#6b7280}
+.back,.back-results,.pager-btn,.nav-btn{background:#fff;color:#111827;border:1px solid rgba(15,23,42,.07)}.back-results{color:#0071e3}.pager-count{color:#7b8491}
+.product-hero{background:#fff;border:1px solid rgba(15,23,42,.06);border-radius:22px;box-shadow:0 6px 20px rgba(15,23,42,.05)}.product-hero h2{color:#111827}.product-hero p{color:#7b8491}
+.gallery-main{border:1px solid rgba(15,23,42,.06);background:#eef1f4;border-radius:20px}.gallery-arrow{background:rgba(255,255,255,.88);color:#111827;border:1px solid rgba(15,23,42,.07)}
+.thumb{border:1px solid rgba(15,23,42,.07);background:#eef1f4}.thumb.active{border-color:#0071e3;box-shadow:0 0 0 2px rgba(0,113,227,.12)}
+.checkout-card{background:#fff;border:1px solid rgba(15,23,42,.07);box-shadow:0 8px 22px rgba(15,23,42,.06)}.checkout-kicker{color:#6b7280}.checkout-total{color:#111827}.checkout-note,.checkout-secondary{color:#7b8491}
+.cost-toggle{background:#f2f5f8;color:#0071e3;border:1px solid rgba(15,23,42,.06)}.inline-breakdown{border-top:1px solid rgba(15,23,42,.08)}
+.receipt-row{color:#536171;border-bottom:1px dashed rgba(15,23,42,.10)}.receipt-row span:last-child{color:#111827}.receipt-row.total{color:#111827;border-top:1px solid rgba(15,23,42,.08)}.receipt-row.total span:last-child{color:#0071e3}
+.condition-pill{background:#eff8f3;color:#26734d;border:1px solid rgba(38,115,77,.12)}
+.scrape-card,.info,.shop-card{background:#fff;border:1px solid rgba(15,23,42,.06)}.scrape-item{background:#f5f7f9;border:1px solid rgba(15,23,42,.04)}.scrape-item small,.info small{color:#8b95a1}.scrape-notes{background:#f7f8fa;border:1px solid rgba(15,23,42,.04);color:#526070}
+.notice{background:#fff7e8;border:1px solid rgba(183,121,31,.16);color:#8b5e16}.shop-logo{background:#f2f5f8;border:1px solid rgba(15,23,42,.05);color:#0071e3}
+.cta-secondary,.edit-answers,.advisor-back{background:#f2f5f8;color:#334155;border:1px solid rgba(15,23,42,.06)}
+.compare-tray{background:#fff;border:1px solid rgba(0,113,227,.18);box-shadow:0 18px 34px rgba(15,23,42,.15)}.compare-tray span{color:#7b8491}
+.overlay{background:rgba(17,24,39,.45)}.sheet{background:#fff;border:1px solid rgba(15,23,42,.06);color:#111827}.sheet p{color:#7b8491}.close{background:#f2f5f8;color:#111827}
+.advisor-shell{background:#fff;border:1px solid rgba(15,23,42,.06);border-radius:22px;box-shadow:0 6px 20px rgba(15,23,42,.05)}.advisor-cover{padding:20px;background:linear-gradient(180deg,#f7fbff,#eef5fc)}
+.advisor-cover h2{color:#111827}.advisor-cover p{color:#6b7280}.advisor-label{color:#0071e3}.advisor-question{color:#111827}
+.choice{background:#f6f8fa;color:#4b5563;border:1px solid rgba(15,23,42,.05)}.choice.active{background:#eaf4ff;color:#0066cc;border-color:rgba(0,113,227,.25)}
+.advisor-input,.custom-budget input{background:#f6f8fa;color:#111827;border:1px solid rgba(15,23,42,.06)}.helper{color:#7b8491}
+.advisor-stepper button{background:#dfe6ed;color:#7b8491}.advisor-stepper button.active{background:#0071e3;color:#fff}.advisor-stepper button.done{background:#dceeff;color:#0071e3}
+.recommendation,.result-card.best{background:#f7fbff;border-color:rgba(0,113,227,.18)}.recommendation h3,.result-card h3{color:#111827}.recommendation p,.result-card p{color:#6b7280}
+.advisor-summary,.result-card{background:#fff;border:1px solid rgba(15,23,42,.06)}.result-label{color:#0071e3}.result-price{color:#111827}.result-tag{background:#eff4f8;color:#5b6775}
+
+
+/* --- Refined premium storefront pass: quieter hierarchy, spacing, and color discipline --- */
+:root{
+  --bg:#f5f5f7;
+  --panel:#ffffff;
+  --panel2:#ffffff;
+  --panel3:#f0f2f5;
+  --line:rgba(17,24,39,.065);
+  --muted:#737b87;
+  --text:#1d1d1f;
+  --accent:#0071e3;
+  --accent2:#0066cc;
+  --chip:#f1f3f5;
+  --shadow:0 8px 24px rgba(15,23,42,.055)
+}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Helvetica Neue",Arial,sans-serif;
+  letter-spacing:-.005em;
+  background:#f5f5f7;
+}
+.page{padding:24px}
+.phone{
+  width:430px;
+  background:#1d1d1f;
+  border-radius:38px;
+  padding:8px;
+  box-shadow:0 24px 64px rgba(15,23,42,.16);
+}
+.screen{border-radius:30px;background:#f7f7f9}
+.topbar{
+  min-height:68px;
+  padding:20px 20px 16px;
+  background:rgba(255,255,255,.88);
+  border-bottom:1px solid rgba(17,24,39,.045);
+}
+.brand{
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:.16em;
+}
+.icon-btn,.top-icon{
+  width:36px;height:36px;
+  background:#f5f5f7;
+  border:0;
+  color:#1d1d1f;
+  font-weight:600;
+}
+.content{padding:18px 18px 102px}
+.hero{
+  padding:24px;
+  border:0;
+  border-radius:24px;
+  box-shadow:0 6px 20px rgba(15,23,42,.045);
+}
+.hero h1{
+  max-width:310px;
+  font-size:38px;
+  line-height:.98;
+  font-weight:700;
+  letter-spacing:-.065em;
+}
+.hero p{
+  margin-top:12px;
+  max-width:330px;
+  font-size:14px;
+  line-height:1.55;
+}
+.search{
+  margin-top:18px;
+  padding:10px 10px 10px 13px;
+  border:0;
+  background:#f1f2f4;
+}
+.search input{
+  font-size:14px;
+  font-weight:500;
+}
+.search-btn{
+  padding:10px 14px;
+  border-radius:11px;
+  font-size:13px;
+  font-weight:650;
+}
+.advisor{
+  margin-top:14px;
+  padding:13px 14px;
+  border-radius:14px;
+  font-size:12px;
+  line-height:1.45;
+  font-weight:500;
+}
+.advisor b{font-weight:650}
+.edit-answers{
+  margin-top:10px;
+  padding:11px;
+  font-size:12px;
+  font-weight:600;
+}
+.section-head{
+  margin:26px 0 12px;
+  align-items:flex-end;
+}
+.section-head h2{
+  font-size:22px;
+  line-height:1.1;
+  font-weight:700;
+  letter-spacing:-.045em;
+}
+.sub{
+  margin-top:4px;
+  font-size:12px;
+  line-height:1.45;
+  font-weight:500;
+}
+.toolbar{gap:12px;padding:6px 0 4px}
+.chips{gap:8px}
+.chip{
+  padding:8px 12px;
+  font-size:11px;
+  font-weight:600;
+  border:0;
+}
+.chip.active{
+  background:#1d1d1f;
+  color:white;
+}
+.toggle{
+  padding:3px;
+  border:0;
+}
+.toggle button{
+  width:36px;height:30px;
+  font-size:13px;
+}
+.grid{gap:14px}
+.card{
+  border:0;
+  border-radius:20px;
+  box-shadow:0 5px 18px rgba(15,23,42,.045);
+}
+.image{aspect-ratio:1/1.04}
+.image-action{
+  width:30px;height:30px;
+  font-size:12px;
+  border:0;
+  box-shadow:0 2px 8px rgba(15,23,42,.09);
+}
+.body{padding:13px 13px 12px}
+.retailer{
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.08em;
+}
+.title{
+  margin-top:6px;
+  min-height:38px;
+  font-size:15px;
+  line-height:1.26;
+  font-weight:650;
+  letter-spacing:-.02em;
+}
+.meta{
+  margin-top:6px;
+  font-size:11px;
+  line-height:1.35;
+  font-weight:500;
+}
+.price{
+  margin-top:11px;
+  font-size:23px;
+  font-weight:700;
+  letter-spacing:-.05em;
+}
+.price small{
+  font-size:10px;
+  font-weight:500;
+}
+.tags{
+  margin-top:10px;
+  gap:6px;
+}
+.tag{
+  padding:5px 7px;
+  font-size:9px;
+  font-weight:600;
+}
+.seller-row{
+  margin-top:10px;
+  padding-top:9px;
+  font-size:10px;
+  font-weight:500;
+}
+.card-actions{padding:0 13px 13px}
+.direct{
+  padding:11px;
+  border-radius:11px;
+  font-size:12px;
+  font-weight:650;
+}
+.footer{
+  padding-top:24px;
+  font-size:11px;
+  line-height:1.6;
+}
+.listing-toolbar{
+  margin-bottom:16px;
+}
+.back-results{
+  padding:9px 11px;
+  border:0;
+  background:#fff;
+  box-shadow:0 2px 8px rgba(15,23,42,.045);
+  font-weight:600;
+}
+.pager{gap:9px}
+.pager-btn{
+  width:34px;height:34px;
+  border:0;
+  background:#fff;
+  box-shadow:0 2px 8px rgba(15,23,42,.045);
+  font-weight:600;
+}
+.pager-count{
+  font-size:12px;
+  font-weight:600;
+}
+.product-hero{
+  border:0;
+  border-radius:22px;
+}
+.product-hero .pad{padding:17px}
+.product-title-row{gap:14px}
+.product-hero h2{
+  font-size:25px;
+  line-height:1.04;
+  font-weight:700;
+  letter-spacing:-.055em;
+}
+.product-hero p{
+  margin-top:6px;
+  font-size:13px;
+  font-weight:500;
+}
+.condition-pill{
+  padding:6px 9px;
+  font-size:10px;
+  font-weight:650;
+}
+.gallery-wrap{margin-top:14px}
+.gallery-main{border:0;border-radius:22px}
+.gallery-arrow{
+  width:34px;height:34px;
+  border:0;
+  box-shadow:0 2px 10px rgba(15,23,42,.12);
+}
+.gallery-counter{
+  padding:6px 8px;
+  font-size:10px;
+  font-weight:600;
+}
+.gallery{gap:9px;margin-top:10px}
+.thumb{
+  width:58px;height:58px;
+  border:0;
+  border-radius:11px;
+}
+.thumb.active{
+  border:2px solid #0071e3;
+  box-shadow:none;
+}
+.checkout-card{
+  margin-top:16px;
+  padding:17px;
+  border:0;
+  border-radius:20px;
+}
+.checkout-kicker{
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.14em;
+}
+.checkout-main{margin-top:8px}
+.checkout-total{
+  font-size:34px;
+  line-height:.95;
+  font-weight:700;
+  letter-spacing:-.065em;
+}
+.checkout-note{
+  margin-top:7px;
+  font-size:11px;
+  line-height:1.45;
+}
+.cost-toggle{
+  padding:8px 10px;
+  border:0;
+  font-size:11px;
+  font-weight:600;
+}
+.checkout-cta{
+  margin-top:14px;
+  padding:13px;
+  border-radius:12px;
+  font-size:13px;
+  font-weight:650;
+}
+.checkout-secondary{
+  margin-top:10px;
+  font-size:11px;
+  font-weight:500;
+}
+.inline-breakdown{
+  margin-top:13px;
+  padding-top:11px;
+}
+.receipt-row{
+  padding:8px 0;
+  font-size:12px;
+  font-weight:500;
+}
+.receipt-row span:last-child{font-weight:650}
+.receipt-row.total{
+  padding-top:11px;
+  font-size:14px;
+  font-weight:650;
+}
+.receipt-row.total span:last-child{
+  font-size:17px;
+  font-weight:700;
+}
+.priority-section{margin-top:26px}
+.scrape-card,.shop-card,.info{
+  border:0;
+  border-radius:18px;
+  box-shadow:0 4px 14px rgba(15,23,42,.035);
+}
+.scrape-card{padding:14px}
+.scrape-grid{gap:9px}
+.scrape-item{
+  padding:11px;
+  border:0;
+  border-radius:12px;
+}
+.scrape-item small,.info small{
+  font-size:10px;
+  font-weight:600;
+}
+.scrape-item b,.info b{
+  margin-top:4px;
+  font-size:13px;
+  line-height:1.35;
+  font-weight:600;
+}
+.scrape-notes{
+  padding:12px;
+  border:0;
+  border-radius:12px;
+  font-size:12px;
+  line-height:1.6;
+}
+.info-grid{gap:9px}
+.info{padding:12px}
+.shop-card{padding:13px}
+.shop-logo{
+  width:48px;height:48px;
+  border:0;
+  border-radius:13px;
+  font-size:15px;
+  font-weight:700;
+}
+.shop-card b{font-size:14px;font-weight:650}
+.shop-card span{font-size:11px;line-height:1.45}
+.empty{
+  padding:14px;
+  border:0;
+  border-radius:14px;
+  font-size:12px;
+  line-height:1.6;
+}
+.notice{
+  padding:12px;
+  border:0;
+  border-radius:13px;
+  font-size:11px;
+  line-height:1.55;
+}
+.cta-secondary{
+  padding:12px;
+  border:0;
+  border-radius:12px;
+  font-size:12px;
+  font-weight:600;
+}
+.advisor-shell{
+  border:0;
+  border-radius:22px;
+}
+.advisor-cover{padding:22px}
+.advisor-cover h2{
+  font-size:29px;
+  font-weight:700;
+  letter-spacing:-.055em;
+}
+.advisor-cover p{
+  margin-top:9px;
+  font-size:13px;
+  line-height:1.55;
+}
+.advisor-stepper{margin-top:17px}
+.advisor-stepper button{
+  padding:6px 7px;
+  font-size:10px;
+  font-weight:600;
+}
+.advisor-body{padding:17px}
+.advisor-label{
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.14em;
+}
+.advisor-question{
+  margin-top:6px;
+  font-size:23px;
+  line-height:1.08;
+  font-weight:700;
+  letter-spacing:-.045em;
+}
+.choice-grid{gap:9px;margin-top:14px}
+.choice{
+  padding:13px;
+  border:0;
+  border-radius:13px;
+  font-size:12px;
+  font-weight:600;
+}
+.advisor-input,.custom-budget input{
+  padding:12px;
+  border:0;
+  border-radius:12px;
+  font-size:13px;
+  font-weight:500;
+}
+.helper{
+  font-size:11px;
+  line-height:1.5;
+}
+.advisor-actions{margin-top:18px}
+.advisor-actions button{
+  padding:12px;
+  border-radius:12px;
+  font-size:12px;
+  font-weight:650;
+}
+.advisor-summary{
+  padding:12px;
+  border:0;
+  border-radius:13px;
+  line-height:1.55;
+}
+.result-list{gap:11px}
+.result-card{
+  padding:14px;
+  border:0;
+  border-radius:16px;
+  box-shadow:0 3px 12px rgba(15,23,42,.035);
+}
+.result-label{
+  font-size:9px;
+  font-weight:700;
+  letter-spacing:.12em;
+}
+.result-card h3{
+  margin-top:6px;
+  font-size:17px;
+  line-height:1.2;
+  font-weight:650;
+}
+.result-card p{
+  margin-top:8px;
+  font-size:12px;
+  line-height:1.55;
+}
+.result-price{
+  font-size:13px;
+  font-weight:650;
+}
+.result-tag{
+  font-size:9px;
+  font-weight:600;
+}
+.recommendation-cta{
+  padding:12px 13px;
+  border-radius:12px;
+  font-size:12px;
+  font-weight:650;
+}
+
+
+/* --- Tight app shell: home, reset, and persistent navigation --- */
+.topbar .brand{cursor:pointer}
+.top-actions{display:flex;gap:8px}
+.home-icon{font-size:14px}
+.home-intro{
+  padding:26px 24px 24px;
+  border-radius:24px;
+  background:#fff;
+  box-shadow:0 6px 20px rgba(15,23,42,.045);
+}
+.home-intro h1{
+  margin:0;
+  max-width:320px;
+  color:#1d1d1f;
+  font-size:39px;
+  line-height:.98;
+  font-weight:700;
+  letter-spacing:-.068em;
+}
+.home-intro p{
+  margin:13px 0 0;
+  max-width:330px;
+  color:#737b87;
+  font-size:14px;
+  line-height:1.58;
+}
+.home-actions{display:grid;gap:10px;margin-top:18px}
+.home-advisor{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  width:100%;
+  padding:14px;
+  border:0;
+  border-radius:14px;
+  background:#f2f7fd;
+  color:#24537d;
+  text-align:left;
+  font-size:12px;
+  line-height:1.45;
+  font-weight:500;
+}
+.home-advisor b{display:block;color:#0f172a;font-weight:650}
+.home-section{margin-top:26px}
+.home-section h2{
+  margin:0;
+  color:#1d1d1f;
+  font-size:20px;
+  line-height:1.1;
+  font-weight:700;
+  letter-spacing:-.045em;
+}
+.home-section p{
+  margin:5px 0 0;
+  color:#7b8491;
+  font-size:12px;
+  line-height:1.45;
+}
+.quick-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+.quick-card{
+  padding:14px;
+  border:0;
+  border-radius:16px;
+  background:#fff;
+  color:#1d1d1f;
+  text-align:left;
+  box-shadow:0 4px 14px rgba(15,23,42,.035);
+}
+.quick-card small{display:block;color:#0071e3;font-size:10px;font-weight:650;letter-spacing:.06em;text-transform:uppercase}
+.quick-card b{display:block;margin-top:7px;font-size:13px;line-height:1.3;font-weight:650}
+.quick-card span{display:block;margin-top:5px;color:#7b8491;font-size:11px;line-height:1.4}
+.results-search-card{
+  padding:14px;
+  border-radius:18px;
+  background:#fff;
+  box-shadow:0 4px 14px rgba(15,23,42,.035);
+}
+.results-search-row{display:flex;align-items:center;gap:9px}
+.results-search-row input{
+  min-width:0;
+  flex:1;
+  border:0;
+  outline:0;
+  background:#f3f5f7;
+  color:#1d1d1f;
+  border-radius:12px;
+  padding:12px;
+  font-size:13px;
+  font-weight:500;
+}
+.results-search-row button{
+  border:0;
+  border-radius:11px;
+  background:#0071e3;
+  color:#fff;
+  padding:11px 13px;
+  font-size:12px;
+  font-weight:650;
+}
+.results-meta{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:12px;
+  margin:22px 0 11px;
+}
+.results-meta h2{
+  margin:0;
+  color:#1d1d1f;
+  font-size:22px;
+  line-height:1.1;
+  font-weight:700;
+  letter-spacing:-.045em;
+}
+.reset-feed{
+  border:0;
+  background:transparent;
+  color:#0071e3;
+  padding:4px 0;
+  font-size:12px;
+  font-weight:600;
+}
+.bottom-nav{
+  position:absolute;
+  left:12px;
+  right:12px;
+  bottom:12px;
+  z-index:40;
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:4px;
+  padding:6px;
+  border-radius:18px;
+  background:rgba(255,255,255,.91);
+  box-shadow:0 8px 24px rgba(15,23,42,.11);
+  backdrop-filter:blur(18px);
+}
+.bottom-nav button{
+  display:grid;
+  place-items:center;
+  gap:3px;
+  border:0;
+  border-radius:13px;
+  background:transparent;
+  color:#8a94a0;
+  padding:7px 4px 6px;
+  font-size:9px;
+  font-weight:600;
+}
+.bottom-nav button span:first-child{font-size:15px;line-height:1}
+.bottom-nav button.active{background:#f0f5fb;color:#0071e3}
+.saved-placeholder{
+  padding:20px;
+  border-radius:20px;
+  background:#fff;
+  box-shadow:0 4px 14px rgba(15,23,42,.035);
+}
+.saved-placeholder h2{margin:0;color:#1d1d1f;font-size:22px;letter-spacing:-.045em}
+.saved-placeholder p{margin:8px 0 0;color:#737b87;font-size:13px;line-height:1.55}
+
+
+/* --- Account, saved searches, and alerts --- */
+.account-icon{font-size:13px}
+.results-actions{display:flex;align-items:center;gap:10px}
+.save-search-action{
+  border:0;
+  border-radius:999px;
+  background:#0071e3;
+  color:#fff;
+  padding:8px 11px;
+  font-size:11px;
+  font-weight:650;
+}
+.saved-list{display:grid;gap:11px;margin-top:14px}
+.saved-card{
+  padding:14px;
+  border-radius:17px;
+  background:#fff;
+  box-shadow:0 4px 14px rgba(15,23,42,.035);
+}
+.saved-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.saved-label{
+  color:#0071e3;
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.11em;
+  text-transform:uppercase;
+}
+.saved-card h3{
+  margin:6px 0 0;
+  color:#1d1d1f;
+  font-size:16px;
+  line-height:1.25;
+  font-weight:650;
+  letter-spacing:-.025em;
+}
+.saved-card p{
+  margin:7px 0 0;
+  color:#737b87;
+  font-size:12px;
+  line-height:1.5;
+}
+.saved-card-actions{display:flex;gap:8px;margin-top:12px}
+.saved-card-actions button{
+  flex:1;
+  border:0;
+  border-radius:11px;
+  padding:10px;
+  font-size:11px;
+  font-weight:650;
+}
+.saved-primary{background:#0071e3;color:#fff}
+.saved-secondary{background:#f1f3f5;color:#45515f}
+.sheet-form{display:grid;gap:11px;margin-top:15px}
+.sheet-input{
+  width:100%;
+  border:0;
+  outline:0;
+  border-radius:12px;
+  background:#f2f4f7;
+  color:#1d1d1f;
+  padding:12px;
+  font-size:13px;
+  font-weight:500;
+}
+.auth-choice{
+  width:100%;
+  border:0;
+  border-radius:12px;
+  background:#f2f4f7;
+  color:#25313d;
+  padding:12px;
+  font-size:12px;
+  font-weight:650;
+}
+.auth-choice.primary{background:#0071e3;color:#fff}
+.sheet-divider{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  color:#9aa2ad;
+  font-size:10px;
+  font-weight:650;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.sheet-divider:before,.sheet-divider:after{content:"";height:1px;flex:1;background:rgba(15,23,42,.08)}
+.sheet-helper{color:#737b87;font-size:11px;line-height:1.55}
+.alert-grid{display:grid;gap:10px;margin-top:14px}
+.alert-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:12px;
+  border-radius:13px;
+  background:#f4f6f8;
+}
+.alert-row label{color:#334155;font-size:12px;font-weight:600}
+.alert-row span{display:block;margin-top:3px;color:#7b8491;font-size:10px;line-height:1.35}
+.alert-row select,.alert-row input{
+  max-width:130px;
+  border:0;
+  border-radius:10px;
+  background:#fff;
+  color:#334155;
+  padding:8px;
+  font-size:11px;
+  font-weight:600;
+  outline:0;
+}
+.switch{
+  position:relative;
+  width:42px;
+  height:24px;
+  flex:none;
+  border:0;
+  border-radius:999px;
+  background:#d6dce3;
+}
+.switch.on{background:#34c759}
+.switch:after{
+  content:"";
+  position:absolute;
+  top:3px;
+  left:3px;
+  width:18px;
+  height:18px;
+  border-radius:50%;
+  background:#fff;
+  transition:.18s ease;
+  box-shadow:0 1px 4px rgba(15,23,42,.18);
+}
+.switch.on:after{transform:translateX(18px)}
+.account-status{
+  display:flex;
+  align-items:center;
+  gap:11px;
+  margin-top:15px;
+  padding:12px;
+  border-radius:14px;
+  background:#f4f6f8;
+}
+.account-avatar{
+  width:42px;height:42px;
+  display:grid;place-items:center;
+  border-radius:50%;
+  background:#0071e3;
+  color:#fff;
+  font-size:14px;
+  font-weight:700;
+}
+.account-status b{display:block;color:#1d1d1f;font-size:13px}
+.account-status span{display:block;margin-top:3px;color:#737b87;font-size:11px}
+.text-button{
+  width:100%;
+  margin-top:11px;
+  border:0;
+  background:transparent;
+  color:#0071e3;
+  padding:8px;
+  font-size:12px;
+  font-weight:650;
+}
+
+</style>
+</head>
+<body>
+<div class="page"><div class="phone"><div class="screen">
+<div class="topbar"><div class="brand" onclick="goHome()">Guitar <span>Finder</span></div><div class="top-actions"><button class="icon-btn home-icon" aria-label="Home" onclick="goHome()">⌂</button><button class="icon-btn" aria-label="Saved searches" onclick="showSaved()">♡</button><button class="icon-btn account-icon" aria-label="Account" onclick="openAccount()">♙</button></div></div>
+<div class="content">
+<div class="page-view open" id="homeView">
+<section class="home-intro">
+  <h1>Find the exact guitar.</h1>
+  <p>Compare listings from retailers, boutique shops, marketplaces, forums, and local sellers without unrelated product noise.</p>
+  <div class="search"><span style="color:#8da1b1">⌕</span><input id="homeSearchInput" value="" placeholder="Search model, finish, artist signature, or SKU"><button class="search-btn" onclick="runHomeSearch()">Search</button></div>
+  <div class="home-actions">
+    <button class="home-advisor" onclick="openAdvisor()"><span><b>Not sure what to buy?</b>Use the advisor to find your strongest match.</span><span>→</span></button>
+  </div>
+</section>
+<section class="home-section">
+  <h2>Start with a search</h2>
+  <p>Try an exact model or revisit a recent search.</p>
+  <div class="quick-grid">
+    <button class="quick-card" onclick="quickSearch('PRS Holcomb Core Cobalt Smokeburst')"><small>Recent search</small><b>PRS Holcomb Core</b><span>Cobalt Smokeburst</span></button>
+    <button class="quick-card" onclick="quickSearch('Fender Custom Shop 1963 Stratocaster Sonic Blue')"><small>Example search</small><b>Fender Custom Shop '63 Strat</b><span>Sonic Blue</span></button>
+    <button class="quick-card" onclick="openAdvisor()"><small>Advisor</small><b>Help me choose</b><span>Get ranked guitar recommendations.</span></button>
+    <button class="quick-card" onclick="showSaved()"><small>Saved</small><b>Saved searches</b><span>Revisit tracked guitars and alerts.</span></button>
+  </div>
+</section>
+</div>
+
+<div class="page-view" id="resultsView">
+  <div class="results-search-card">
+    <div class="results-search-row"><input id="searchInput" value="" placeholder="Search another exact model"><button onclick="runSearch()">Search</button></div>
+  </div>
+  <div class="results-meta"><div><h2>Exact matches</h2><div class="sub" id="resultCount">0 verified model matches</div></div><div class="results-actions"><button class="reset-feed" onclick="resetFeed()">Reset feed</button><button class="save-search-action" onclick="requestSaveSearch()">Save search</button></div></div>
+  <div class="toolbar"><div class="chips"><button class="chip active" data-filter="all" onclick="setFilter('all',this)">All</button><button class="chip" data-filter="new" onclick="setFilter('new',this)">New</button><button class="chip" data-filter="used" onclick="setFilter('used',this)">Used</button><button class="chip" data-filter="us" onclick="setFilter('us',this)">US only</button><button class="chip" data-filter="intl" onclick="setFilter('intl',this)">International</button></div>
+  <div class="toggle"><button id="gridBtn" class="active" onclick="setView('grid')">▦</button><button id="listBtn" onclick="setView('list')">☷</button></div></div>
+  <div id="results" class="grid"></div>
+  <div class="footer">Tap a listing card for the grouped product page. View Listing opens the in-app listing detail page. The final CTA takes the user to the original seller page.</div>
+</div>
+
+<div class="page-view" id="savedView"></div>
+
+<div class="page-view" id="productView"></div>
+<div class="page-view" id="listingView"></div>
+<div class="page-view" id="advisorView"></div>
+<div class="bottom-nav"><button id="navHome" class="active" onclick="goHome()"><span>⌂</span><span>Home</span></button><button id="navFinder" onclick="focusFinder()"><span>⌕</span><span>Finder</span></button><button id="navAdvisor" onclick="openAdvisor()"><span>◎</span><span>Advisor</span></button><button id="navSaved" onclick="showSaved()"><span>♡</span><span>Saved</span></button></div></div></div></div></div>
+<div class="overlay" id="authOverlay" onclick="authOverlayClick(event)"><div class="sheet" id="authSheet"></div></div>
+<div class="overlay" id="alertOverlay" onclick="alertOverlayClick(event)"><div class="sheet" id="alertSheet"></div></div>
+<div class="overlay" id="accountOverlay" onclick="accountOverlayClick(event)"><div class="sheet" id="accountSheet"></div></div>
+<div class="compare-tray" id="compareTray"><div><b id="compareCount">0 listings selected</b><br><span>Compare price, condition, and source</span></div><button class="compare-btn" onclick="openCompare()">Compare</button></div>
+<div class="overlay" id="compareOverlay" onclick="compareOverlayClick(event)"><div class="sheet"><div class="sheet-head"><div><h2>Compare listings</h2><p>Side-by-side view of your selected options.</p></div><button class="close" onclick="closeCompare()">×</button></div><div class="compare-grid" id="compareGrid"></div></div></div>
+<script>
+const listings=[
+{id:"ish",source:"Ish Guitars",logoText:"ISH",weight:"7 lb 11 oz",year:"2024",serial:"Retailer page",included:"Case, paperwork",conditionNotes:"New instrument. Shop-inspected before shipment.",retailerDescription:"Boutique dealer listing with setup inspection and support.",gallery:["https://images.unsplash.com/photo-1556449895-a33c9dba33dd?auto=format&fit=crop&w=1000&q=85","https://images.unsplash.com/photo-1510915361894-db8b60106cb1?auto=format&fit=crop&w=1000&q=85","https://images.unsplash.com/photo-1564186763535-ebb21ef5277f?auto=format&fit=crop&w=1000&q=85"],sourceType:"Boutique shop",status:"New",brand:"PRS",model:"Mark Holcomb Core",title:"PRS Mark Holcomb Core",finish:"Cobalt Smokeburst",condition:"New",country:"US",total:5307,item:4899,shipping:65,tax:343,import:0,returns:"Store policy",financing:"Available",seller:"Ish Guitars",location:"Syracuse, NY",freshness:"Checked 2 hours ago",description:"Exact PRS Mark Holcomb Core in Cobalt Smokeburst from a boutique dealer. Includes shop inspection and setup support.",tags:["Rare finish","Setup inspected"],image:"https://images.unsplash.com/photo-1556449895-a33c9dba33dd?auto=format&fit=crop&w=800&q=85",url:"https://ish.guitars/search?q=PRS%20Holcomb%20Core%20Cobalt%20Smokeburst"},
+{id:"sweetwater",source:"Sweetwater",logoText:"SW",weight:"7 lb 9 oz",year:"2024",serial:"Retailer page",included:"Hardshell case",conditionNotes:"Brand-new authorized-dealer inventory.",retailerDescription:"Exact model and finish with financing and return support.",gallery:["https://images.unsplash.com/photo-1556449895-a33c9dba33dd?auto=format&fit=crop&w=1000&q=85","https://images.unsplash.com/photo-1525201548942-d8732f6617a0?auto=format&fit=crop&w=1000&q=85","https://images.unsplash.com/photo-1516924962500-2b4b3b99ea02?auto=format&fit=crop&w=1000&q=85"],sourceType:"Large retailer",status:"New",brand:"PRS",model:"Mark Holcomb Core",title:"PRS Mark Holcomb Core",finish:"Cobalt Smokeburst",condition:"New",country:"US",total:5349,item:4999,shipping:0,tax:350,import:0,returns:"Easy returns",financing:"0% financing",seller:"Sweetwater",location:"Fort Wayne, IN",freshness:"Checked today",description:"Authorized retailer option with financing and returns. Exact model and finish match.",tags:["0% financing","Easy returns"],image:"https://images.unsplash.com/photo-1556449895-a33c9dba33dd?auto=format&fit=crop&w=800&q=85",url:"https://www.sweetwater.com/store/search?s=PRS%20Holcomb%20Core%20Cobalt%20Smokeburst"},
+{id:"reverb",source:"Reverb",logoText:"R",weight:"Not listed",year:"2023",serial:"Seller page",included:"Case included",conditionNotes:"Mint used. Seller notes minimal handling wear only.",retailerDescription:"Marketplace listing with buyer protection and seller offers enabled.",gallery:["https://images.unsplash.com/photo-1510915361894-db8b60106cb1?auto=format&fit=crop&w=1000&q=85","https://images.unsplash.com/photo-1556449895-a33c9dba33dd?auto=format&fit=crop&w=1000&q=85","https://images.unsplash.com/photo-1525201548942-d8732f6617a0?auto=format&fit=crop&w=1000&q=85"],sourceType:"Marketplace",status:"Used",brand:"PRS",model:"Mark Holcomb Core",title:"PRS Mark Holcomb Core",finish:"Cobalt Smokeburst",condition:"Mint used",country:"US",total:4702,item:4299,shipping:95,tax:308,import:0,returns:"Seller policy",financing:"Varies",seller:"Marketplace seller",location:"US seller",freshness:"Listed yesterday",description:"Used marketplace listing with buyer protection. Exact model and finish match.",tags:["Buyer protection","Seller offers"],image:"https://images.unsplash.com/photo-1510915361894-db8b60106cb1?auto=format&fit=crop&w=800&q=85",url:"https://reverb.com/marketplace?query=PRS%20Holcomb%20Core%20Cobalt%20Smokeburst"},
+{id:"tgp",source:"The Gear Page",logoText:"TGP",weight:"Approx. 7.8 lb",year:"2023",serial:"Forum post",included:"Case, strap locks",conditionNotes:"Excellent used. Private seller mentions light pick wear.",retailerDescription:"Forum classified. Ask seller for detailed photos and serial verification.",gallery:["https://images.unsplash.com/photo-1564186763535-ebb21ef5277f?auto=format&fit=crop&w=1000&q=85","https://images.unsplash.com/photo-1510915361894-db8b60106cb1?auto=format&fit=crop&w=1000&q=85","https://images.unsplash.com/photo-1556449895-a33c9dba33dd?auto=format&fit=crop&w=1000&q=85"],sourceType:"Forum classifieds",status:"Used",brand:"PRS",model:"Mark Holcomb Core",title:"PRS Mark Holcomb Core",finish:"Cobalt Smokeburst",condition:"Excellent used",country:"US",total:4230,item:4150,shipping:80,tax:0,import:0,returns:"Private sale",financing:"No",seller:"Forum member",location:"US seller",freshness:"Forum post",description:"Forum classified listing. Exact model and finish match, but private-sale terms apply.",tags:["Private sale","Ask questions"],image:"https://images.unsplash.com/photo-1564186763535-ebb21ef5277f?auto=format&fit=crop&w=800&q=85",url:"https://www.thegearpage.net/board/index.php?search/search&keywords=PRS%20Holcomb%20Core%20Cobalt%20Smokeburst"},
+{id:"fb",source:"Facebook Marketplace",logoText:"FB",weight:"Not listed",year:"Not listed",serial:"Local listing",included:"Ask seller",conditionNotes:"Used local listing. Inspect in person before purchase.",retailerDescription:"Local listing with pickup only. Confirm finish, serial, and condition in person.",gallery:["https://images.unsplash.com/photo-1516924962500-2b4b3b99ea02?auto=format&fit=crop&w=1000&q=85","https://images.unsplash.com/photo-1525201548942-d8732f6617a0?auto=format&fit=crop&w=1000&q=85","https://images.unsplash.com/photo-1564186763535-ebb21ef5277f?auto=format&fit=crop&w=1000&q=85"],sourceType:"Local marketplace",status:"Used",brand:"PRS",model:"Mark Holcomb Core",title:"PRS Mark Holcomb Core",finish:"Cobalt Smokeburst",condition:"Used local",country:"US",total:4050,item:4050,shipping:0,tax:0,import:0,returns:"Private sale",financing:"No",seller:"Local seller",location:"Local pickup",freshness:"Local listing",description:"Local-marketplace listing. Exact model and finish match. Meet safely and inspect the instrument before purchase.",tags:["Local pickup","Meet safely"],image:"https://images.unsplash.com/photo-1516924962500-2b4b3b99ea02?auto=format&fit=crop&w=800&q=85",url:"https://www.facebook.com/marketplace/search/?query=PRS%20Holcomb%20Core%20Cobalt%20Smokeburst"},
+{id:"ebay",source:"eBay Japan",logoText:"eB",weight:"Not listed",year:"2023",serial:"Seller page",included:"Case included",conditionNotes:"Excellent used. International seller describes minor handling wear.",retailerDescription:"International listing with import estimate and buyer protection.",gallery:["https://images.unsplash.com/photo-1525201548942-d8732f6617a0?auto=format&fit=crop&w=1000&q=85","https://images.unsplash.com/photo-1556449895-a33c9dba33dd?auto=format&fit=crop&w=1000&q=85","https://images.unsplash.com/photo-1510915361894-db8b60106cb1?auto=format&fit=crop&w=1000&q=85"],sourceType:"International marketplace",status:"Used",brand:"PRS",model:"Mark Holcomb Core",title:"PRS Mark Holcomb Core",finish:"Cobalt Smokeburst",condition:"Excellent used",country:"Japan",total:4693,item:3999,shipping:240,tax:298,import:156,returns:"Seller policy",financing:"Varies",seller:"International seller",location:"Japan",freshness:"Checked today",description:"International listing with estimated landed cost including shipping, tax, and import. Exact model and finish match.",tags:["Import estimate","Buyer protection"],image:"https://images.unsplash.com/photo-1525201548942-d8732f6617a0?auto=format&fit=crop&w=800&q=85",url:"https://www.ebay.com/sch/i.html?_nkw=PRS%20Holcomb%20Core%20Cobalt%20Smokeburst"},
+{id:"gc",source:"Guitar Center",logoText:"GC",weight:"Not listed",year:"2024",serial:"Retailer page",included:"Gig bag",conditionNotes:"New inventory.",retailerDescription:"Incorrect SE variant retained in seed data only to validate strict filtering.",gallery:["https://images.unsplash.com/photo-1556449895-a33c9dba33dd?auto=format&fit=crop&w=1000&q=85"],sourceType:"Large retailer",status:"New",brand:"PRS",model:"SE Mark Holcomb",title:"PRS SE Mark Holcomb",finish:"Holcomb Burst",condition:"New",country:"US",total:1283,item:1199,shipping:0,tax:84,import:0,returns:"45-day returns",financing:"Available",seller:"Guitar Center",location:"US",freshness:"Checked today",description:"Related but incorrect SE model. This should not appear for a Core search.",tags:["Store pickup","45-day returns"],image:"https://images.unsplash.com/photo-1556449895-a33c9dba33dd?auto=format&fit=crop&w=800&q=85",url:"https://www.guitarcenter.com/search?Ntt=PRS%20SE%20Mark%20Holcomb"}
+,{id:"jackson-misha-ht6",source:"Wildwood Guitars",sourceType:"Boutique shop",status:"New",brand:"Jackson",model:"USA Signature Misha Mansoor Juggernaut HT6",title:"Jackson USA Signature Misha Mansoor Juggernaut HT6",finish:"Satin Silver",condition:"New",country:"US",total:4706,item:4399,shipping:0,tax:307,import:0,returns:"Store policy",financing:"Available",seller:"Wildwood Guitars",location:"Louisville, CO",freshness:"Prototype listing",description:"Prototype exact-match listing for the Misha Mansoor USA Signature Juggernaut HT6.",tags:["Artist signature","Hardtail"],image:"https://images.unsplash.com/photo-1564186763535-ebb21ef5277f?auto=format&fit=crop&w=800&q=85",url:"#"}
+,{id:"jackson-misha-ht7fm",source:"Ish Guitars",sourceType:"Boutique shop",status:"New",brand:"Jackson",model:"USA Signature Misha Mansoor Juggernaut HT7FM",title:"Jackson USA Signature Misha Mansoor Juggernaut HT7FM",finish:"Satin Laguna Burst",condition:"New",country:"US",total:5296,item:4950,shipping:0,tax:346,import:0,returns:"Store policy",financing:"Available",seller:"Ish Guitars",location:"Syracuse, NY",freshness:"Prototype listing",description:"Prototype exact-match listing for the Misha Mansoor USA Signature Juggernaut HT7FM.",tags:["Artist signature","7 string"],image:"https://images.unsplash.com/photo-1556449895-a33c9dba33dd?auto=format&fit=crop&w=800&q=85",url:"#"}
+,{id:"mayones-duvell7",source:"Dijkmans Muziek",sourceType:"International retailer",status:"New",brand:"Mayones",model:"Duvell Elite 7",title:"Mayones Duvell Elite 7",finish:"Custom finish",condition:"New",country:"Netherlands",total:4585,item:3995,shipping:190,tax:250,import:150,returns:"Store policy",financing:"Varies",seller:"Dijkmans Muziek",location:"Netherlands",freshness:"Prototype listing",description:"Prototype alternate listing for a premium modern 7-string guitar.",tags:["7 string","Modern metal"],image:"https://images.unsplash.com/photo-1556449895-a33c9dba33dd?auto=format&fit=crop&w=800&q=85",url:"#"}
+,{id:"musicman-jp15",source:"Sweetwater",sourceType:"Large retailer",status:"New",brand:"Music Man",model:"JP15 7 String",title:"Ernie Ball Music Man JP15 7 String",finish:"Green Tiger Eye",condition:"New",country:"US",total:4279,item:3999,shipping:0,tax:280,import:0,returns:"Easy returns",financing:"Available",seller:"Sweetwater",location:"Fort Wayne, IN",freshness:"Prototype listing",description:"Prototype alternate listing for a premium modern 7-string guitar.",tags:["7 string","Piezo"],image:"https://images.unsplash.com/photo-1510915361894-db8b60106cb1?auto=format&fit=crop&w=800&q=85",url:"#"}
+,{id:"musicman-majesty",source:"Guitar Center",sourceType:"Large retailer",status:"New",brand:"Music Man",model:"Majesty",title:"Ernie Ball Music Man Majesty",finish:"Arctic Dream",condition:"New",country:"US",total:4814,item:4499,shipping:0,tax:315,import:0,returns:"45-day returns",financing:"Available",seller:"Guitar Center",location:"US",freshness:"Prototype listing",description:"Prototype alternate listing for a premium modern prog-metal guitar.",tags:["Prog metal","Piezo"],image:"https://images.unsplash.com/photo-1525201548942-d8732f6617a0?auto=format&fit=crop&w=800&q=85",url:"#"}
+];
+let activeFilter="all",activeView="grid",saved=new Set(),compare=new Set(),exactResults=[],currentListingId=null,listingTransitionDirection=null;
+let currentUser=null,pendingAuthAction=null,pendingAlertQuery="",savedSearches=[],includeInternational=true,alertFrequency="instant";
+const money=v=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0}).format(v);
+function normalize(v){return String(v||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim()}
+function strictMatch(l,q){const hay=normalize(`${l.brand} ${l.model} ${l.finish}`),tokens=normalize(q).split(" ").filter(t=>!["guitar","electric","for","sale","new","used","the"].includes(t));return tokens.every(t=>hay.includes(t))&&!(tokens.includes("core")&&hay.includes(" se "))}
+function filtered(){return exactResults.filter(l=>activeFilter==="all"||activeFilter==="new"&&l.status==="New"||activeFilter==="used"&&l.status==="Used"||activeFilter==="us"&&l.country==="US"||activeFilter==="intl"&&l.country!=="US")}
+function tone(t){t=t.toLowerCase();return(t.includes("import")||t.includes("private")||t.includes("safely"))?"warn":(t.includes("financing")||t.includes("returns")||t.includes("pickup")||t.includes("rare")||t.includes("protection")||t.includes("setup"))?"good":""}
+function tags(l,n=2){return l.tags.slice(0,n).map(t=>`<span class="tag ${tone(t)}">${t}</span>`).join("")}
+function imageActions(l){return `<div class="image-actions"><button class="image-action ${saved.has(l.id)?"active":""}" onclick="event.stopPropagation();toggleSave('${l.id}')">♡</button><button class="image-action ${compare.has(l.id)?"active":""}" onclick="event.stopPropagation();toggleCompare('${l.id}')">⊞</button></div>`}
+function tile(l){return `<article class="card"><div class="card-main" onclick="openProduct('${l.id}')"><div class="image"><img src="${l.image}">${imageActions(l)}</div><div class="body"><div class="retailer">${l.source}</div><div class="title">${l.title}</div><div class="meta">${l.condition} · ${l.finish}</div><div class="price">${money(l.total)} <small>est. total</small></div><div class="tags">${tags(l)}</div><div class="seller-row"><span>${l.sourceType}</span><span>${l.country}</span></div></div></div><div class="card-actions"><button class="direct" onclick="openListing('${l.id}')">View Listing</button></div></article>`}
+function list(l){return `<article class="card list-card"><div class="card-main" style="display:contents" onclick="openProduct('${l.id}')"><div class="image"><img src="${l.image}">${imageActions(l)}</div><div class="body"><div class="retailer">${l.source}</div><div class="title">${l.title}</div><div class="meta">${l.condition} · ${l.finish}</div><div class="price">${money(l.total)} <small>est. total</small></div><div class="breakdown">Item ${money(l.item)} · Shipping ${money(l.shipping)} · ${l.country}</div><div class="tags">${tags(l,3)}</div><div class="seller-row"><span>${l.sourceType}</span><span>${l.country}</span></div></div></div><div class="card-actions"><button class="direct" onclick="openListing('${l.id}')">View Listing</button></div></article>`}
+function render(){const data=filtered(),el=document.getElementById("results");resultCount.textContent=`${exactResults.length} verified model match${exactResults.length===1?"":"es"}`;el.className=activeView;el.innerHTML=data.length?data.map(activeView==="grid"?tile:list).join(""):`<div class="empty">No exact listings match this search and filter. Save the search to get notified when the exact model appears. We will not substitute a different model.</div>`}
+function runSearch(){exactResults=listings.filter(l=>strictMatch(l,searchInput.value.trim()));show("resultsView");render()}
+function setView(v){activeView=v;gridBtn.classList.toggle("active",v==="grid");listBtn.classList.toggle("active",v==="list");render()}
+function setFilter(f,b){activeFilter=f;document.querySelectorAll("[data-filter]").forEach(x=>x.classList.remove("active"));b.classList.add("active");render()}
+function toggleSave(id){
+ if(!currentUser){openAuth("Save this listing",()=>toggleSave(id));return}
+ saved.has(id)?saved.delete(id):saved.add(id);
+ render();
+ if(document.getElementById("savedView").classList.contains("open"))renderSavedView()
+}
+function toggleCompare(id){compare.has(id)?compare.delete(id):compare.add(id);updateTray();render()}
+function updateTray(){compareTray.classList.toggle("open",compare.size>0);compareCount.textContent=`${compare.size} listing${compare.size===1?"":"s"} selected`}
+function updateBottomNav(id){
+  const map={homeView:"navHome",resultsView:"navFinder",advisorView:"navAdvisor",savedView:"navSaved"};
+  ["navHome","navFinder","navAdvisor","navSaved"].forEach(navId=>document.getElementById(navId)?.classList.remove("active"));
+  if(map[id])document.getElementById(map[id])?.classList.add("active")
+}
+function show(id){
+  ["homeView","resultsView","savedView","productView","listingView","advisorView"].forEach(x=>document.getElementById(x)?.classList.toggle("open",x===id));
+  updateBottomNav(id)
+}
+function resetFilterUI(){
+  activeFilter="all";
+  document.querySelectorAll("[data-filter]").forEach(button=>button.classList.toggle("active",button.dataset.filter==="all"))
+}
+function goHome(){
+  resetFilterUI();
+  compare.clear();
+  updateTray();
+  show("homeView")
+}
+function showSaved(){renderSavedView();show("savedView")}
+function focusFinder(){
+  show("homeView");
+  setTimeout(()=>document.getElementById("homeSearchInput")?.focus(),0)
+}
+
+function openAuth(title="Sign in to continue",afterAuth=null){
+ pendingAuthAction=afterAuth;
+ authSheet.innerHTML=`<div class="sheet-head"><div><h2>${title}</h2><p>Create an account or sign in to save searches, track listings, and receive alerts.</p></div><button class="close" onclick="closeAuth()">×</button></div>
+ <div class="sheet-form">
+   <button class="auth-choice" onclick="simulateSocialLogin('Google')">Continue with Google</button>
+   <button class="auth-choice" onclick="simulateSocialLogin('Apple')">Continue with Apple</button>
+   <div class="sheet-divider">or</div>
+   <input class="sheet-input" id="authEmail" type="email" placeholder="Email address">
+   <button class="auth-choice primary" onclick="simulateEmailLogin()">Continue with email</button>
+   <div class="sheet-helper">Prototype only: sign-in is simulated locally. The production app should use Supabase Auth and send a secure magic link.</div>
+ </div>`;
+ authOverlay.classList.add("open")
+}
+function closeAuth(){authOverlay.classList.remove("open");pendingAuthAction=null}
+function authOverlayClick(event){if(event.target===authOverlay)closeAuth()}
+function finishLogin(email,provider){
+ currentUser={email,name:email.split("@")[0]||"Guitar shopper",provider};
+ authOverlay.classList.remove("open");
+ const action=pendingAuthAction;pendingAuthAction=null;
+ if(action)action();
+ renderSavedView()
+}
+function simulateSocialLogin(provider){finishLogin(`${provider.toLowerCase()}-user@example.com`,provider)}
+function simulateEmailLogin(){
+ const input=document.getElementById("authEmail");
+ const email=(input?.value||"").trim();
+ if(!email||!email.includes("@")){input?.focus();return}
+ finishLogin(email,"Email")
+}
+function openAccount(){
+ if(!currentUser){openAuth("Sign in or create an account");return}
+ accountSheet.innerHTML=`<div class="sheet-head"><div><h2>Your account</h2><p>Manage saved searches, tracked listings, and alert preferences.</p></div><button class="close" onclick="closeAccount()">×</button></div>
+ <div class="account-status"><div class="account-avatar">${currentUser.name.slice(0,2).toUpperCase()}</div><div><b>${currentUser.name}</b><span>${currentUser.email} · ${currentUser.provider}</span></div></div>
+ <button class="auth-choice primary" style="margin-top:14px" onclick="closeAccount();showSaved()">View saved searches</button>
+ <button class="text-button" onclick="signOut()">Sign out</button>`;
+ accountOverlay.classList.add("open")
+}
+function closeAccount(){accountOverlay.classList.remove("open")}
+function accountOverlayClick(event){if(event.target===accountOverlay)closeAccount()}
+function signOut(){
+ currentUser=null;
+ saved.clear();
+ savedSearches=[];
+ closeAccount();
+ renderSavedView();
+ show("homeView")
+}
+function requestSaveSearch(){
+ const query=(document.getElementById("searchInput")?.value||"").trim();
+ if(!query)return;
+ if(!currentUser){openAuth("Save this search",()=>openAlertSettings(query));return}
+ openAlertSettings(query)
+}
+function openAlertSettings(query){
+ pendingAlertQuery=query;
+ includeInternational=true;
+ alertFrequency="instant";
+ alertSheet.innerHTML=`<div class="sheet-head"><div><h2>Track this guitar</h2><p>${query}</p></div><button class="close" onclick="closeAlertSettings()">×</button></div>
+ <div class="alert-grid">
+   <div class="alert-row"><div><label>Condition</label><span>Choose which listings trigger alerts.</span></div><select id="alertCondition"><option value="both">New and used</option><option value="new">New only</option><option value="used">Used only</option></select></div>
+   <div class="alert-row"><div><label>International listings</label><span>Include listings outside the US.</span></div><button id="intlSwitch" class="switch on" onclick="toggleInternationalAlert()"></button></div>
+   <div class="alert-row"><div><label>Target price</label><span>Optional: notify when total cost is below this.</span></div><input id="targetPrice" type="number" placeholder="$4,000"></div>
+   <div class="alert-row"><div><label>Alert timing</label><span>Choose how often you hear from us.</span></div><select id="alertFrequency"><option value="instant">Instant</option><option value="daily">Daily digest</option><option value="weekly">Weekly digest</option></select></div>
+ </div>
+ <button class="auth-choice primary" style="margin-top:14px" onclick="saveAlert()">Save alert</button>`;
+ alertOverlay.classList.add("open")
+}
+function toggleInternationalAlert(){
+ includeInternational=!includeInternational;
+ document.getElementById("intlSwitch")?.classList.toggle("on",includeInternational)
+}
+function closeAlertSettings(){alertOverlay.classList.remove("open")}
+function alertOverlayClick(event){if(event.target===alertOverlay)closeAlertSettings()}
+function saveAlert(){
+ const condition=document.getElementById("alertCondition")?.value||"both";
+ const frequency=document.getElementById("alertFrequency")?.value||"instant";
+ const targetPrice=Number(document.getElementById("targetPrice")?.value||0);
+ const existing=savedSearches.find(item=>item.query===pendingAlertQuery);
+ const record={query:pendingAlertQuery,condition,frequency,targetPrice,includeInternational,createdAt:new Date().toISOString()};
+ if(existing)Object.assign(existing,record);else savedSearches.unshift(record);
+ closeAlertSettings();
+ renderSavedView();
+ show("savedView")
+}
+function removeSavedSearch(index){savedSearches.splice(index,1);renderSavedView()}
+function rerunSavedSearch(index){
+ const item=savedSearches[index];if(!item)return;
+ document.getElementById("homeSearchInput").value=item.query;
+ document.getElementById("searchInput").value=item.query;
+ runSearch()
+}
+function renderSavedView(){
+ const view=document.getElementById("savedView");if(!view)return;
+ if(!currentUser){
+   view.innerHTML=`<div class="saved-placeholder"><h2>Saved searches</h2><p>Create an account to track exact guitars, price drops, new listings, and restocks.</p><button class="recommendation-cta" style="margin-top:14px" onclick="openAuth('Sign in to view saved searches',()=>showSaved())"><span>Sign in or create account</span><span>→</span></button></div>`;
+   return
+ }
+ const searchCards=savedSearches.map((item,index)=>`<div class="saved-card"><div class="saved-card-top"><div><div class="saved-label">Tracked search</div><h3>${item.query}</h3></div><button class="image-action" onclick="removeSavedSearch(${index})">×</button></div><p>${item.condition==="both"?"New and used":item.condition==="new"?"New only":"Used only"} · ${item.includeInternational?"Worldwide":"US only"} · ${item.frequency==="instant"?"Instant alerts":item.frequency==="daily"?"Daily digest":"Weekly digest"}${item.targetPrice?` · Under ${money(item.targetPrice)}`:""}</p><div class="saved-card-actions"><button class="saved-primary" onclick="rerunSavedSearch(${index})">View results</button><button class="saved-secondary" onclick="openAlertSettings('${item.query.replace(/'/g,"\\'")}')">Edit alert</button></div></div>`).join("");
+ const listingCards=[...saved].map(id=>listings.find(item=>item.id===id)).filter(Boolean).map(item=>`<div class="saved-card"><div class="saved-label">Saved listing</div><h3>${item.title}</h3><p>${item.source} · ${item.condition} · ${money(item.total)} estimated total</p><div class="saved-card-actions"><button class="saved-primary" onclick="openListing('${item.id}')">View listing</button><button class="saved-secondary" onclick="toggleSave('${item.id}')">Remove</button></div></div>`).join("");
+ view.innerHTML=`<div class="saved-placeholder"><h2>Saved</h2><p>Track searches for new listings and price drops, or revisit individual listings you saved.</p><button class="recommendation-cta" style="margin-top:14px" onclick="goHome()"><span>Start a new search</span><span>→</span></button></div>
+ ${savedSearches.length?`<section class="home-section"><h2>Search alerts</h2><p>${savedSearches.length} active alert${savedSearches.length===1?"":"s"}</p><div class="saved-list">${searchCards}</div></section>`:""}
+ ${saved.size?`<section class="home-section"><h2>Saved listings</h2><p>${saved.size} listing${saved.size===1?"":"s"} saved</p><div class="saved-list">${listingCards}</div></section>`:""}
+ ${!savedSearches.length&&!saved.size?`<section class="home-section"><div class="empty">Nothing saved yet. Search for a guitar and tap Save search to create an alert.</div></section>`:""}`
+}
+function quickSearch(query){
+  document.getElementById("homeSearchInput").value=query;
+  runHomeSearch()
+}
+function runHomeSearch(){
+  const value=document.getElementById("homeSearchInput").value.trim();
+  if(!value){document.getElementById("homeSearchInput").focus();return}
+  document.getElementById("searchInput").value=value;
+  resetFilterUI();
+  runSearch()
+}
+function resetFeed(){
+  exactResults=[];
+  document.getElementById("searchInput").value="";
+  document.getElementById("homeSearchInput").value="";
+  resetFilterUI();
+  compare.clear();
+  updateTray();
+  show("homeView")
+}
+function openProduct(id){const l=listings.find(x=>x.id===id),related=exactResults.filter(x=>normalize(x.model)===normalize(l.model)&&normalize(x.finish)===normalize(l.finish));productView.innerHTML=`<div class="page-head"><button class="back" onclick="show('resultsView')">‹</button><div><div class="sub">Product page</div><b>${l.title}</b></div></div><section class="product-hero"><img src="${l.image}"><div class="pad"><h2>${l.title}</h2><p>${l.finish}. Compare exact matching listings before leaving the app.</p><div class="tags">${tags(l,3)}</div></div></section><div class="section-head"><div><h2>Matching listings</h2><div class="sub">${related.length} available now</div></div></div><div class="list">${related.map(x=>`<article class="card list-card"><div class="image"><img src="${x.image}">${imageActions(x)}</div><div class="body"><div class="retailer">${x.source}</div><div class="title">${x.title}</div><div class="meta">${x.condition} · ${x.country}</div><div class="price">${money(x.total)} <small>est. total</small></div><div class="breakdown">Item ${money(x.item)} · Shipping ${money(x.shipping)}</div><button class="direct" style="margin-top:9px;width:100%" onclick="openListing('${x.id}')">View listing</button></div></article>`).join("")}</div>`;show("productView")}
+function listingNavItems(){const visible=filtered();return visible.length?visible:exactResults}
+function openAdjacentListing(direction){
+ const items=listingNavItems();if(!items.length)return;
+ const index=Math.max(0,items.findIndex(x=>x.id===currentListingId));
+ const nextIndex=index+direction;
+ if(nextIndex<0||nextIndex>=items.length)return;
+ listingTransitionDirection=direction>0?"next":"prev";
+ openListing(items[nextIndex].id,true)
+}
+function openListing(id,fromAdjacent=false){
+ const l=listings.find(x=>x.id===id);currentListingId=id;
+ const items=listingNavItems(),index=Math.max(0,items.findIndex(x=>x.id===id));
+ const hasPrev=index>0,hasNext=index<items.length-1;
+ if(!fromAdjacent){lastView=document.getElementById("productView").classList.contains("open")?"productView":"resultsView"}
+ const dutyNote=l.import>0?`<div class="receipt-row"><span>Estimated import duty</span><span>${money(l.import)}</span></div>`:`<div class="receipt-row muted"><span>Estimated import duty</span><span>${money(l.import)}</span></div>`;
+ const gallery=(l.gallery&&l.gallery.length?l.gallery:[l.image]);
+ listingView.innerHTML=`<div class="listing-toolbar"><button class="back-results" onclick="show('resultsView')">← Results</button><div class="pager"><button class="pager-btn" ${hasPrev?"":"disabled"} onclick="openAdjacentListing(-1)">‹</button><div class="pager-count">${index+1} of ${items.length}</div><button class="pager-btn" ${hasNext?"":"disabled"} onclick="openAdjacentListing(1)">›</button></div><div class="toolbar-spacer"></div></div>
+ <section class="product-hero"><div class="pad"><div class="retailer">${l.source}</div><div class="product-title-row"><div><h2 style="margin-top:6px">${l.title}</h2><p>${l.finish}</p></div><span class="condition-pill">${l.condition}</span></div></div></section>
+ <div class="gallery-wrap"><div class="gallery-main"><img id="listingGalleryMain" src="${gallery[0]}" alt="${l.title}"><button class="gallery-arrow prev" onclick="stepGallery(-1)">‹</button><button class="gallery-arrow next" onclick="stepGallery(1)">›</button><div class="gallery-counter" id="galleryCounter">1 / ${gallery.length}</div></div><div class="gallery" id="listingGalleryThumbs">${gallery.map((img,i)=>`<button class="thumb ${i===0?"active":""}" onclick="setGalleryImage(${i})"><img src="${img}" alt="${l.title} photo ${i+1}"></button>`).join("")}</div></div>
+ <div class="checkout-card">
+   <div class="checkout-kicker">Total estimated cost</div>
+   <div class="checkout-main">
+     <div>
+       <div class="checkout-total">${money(l.total)}</div>
+       <div class="checkout-note">Includes instrument, shipping, estimated tax${l.import>0?", and import duty":""}.</div>
+     </div>
+     <button class="cost-toggle" onclick="toggleCostBreakdown()"><span>Cost breakdown</span><span class="chev">▾</span></button>
+   </div>
+   <div class="inline-breakdown collapsed" id="receiptBlock">
+     <div class="receipt-row"><span>Instrument price</span><span>${money(l.item)}</span></div>
+     <div class="receipt-row"><span>Shipping</span><span>${money(l.shipping)}</span></div>
+     <div class="receipt-row"><span>Estimated sales tax</span><span>${money(l.tax)}</span></div>
+     ${dutyNote}
+     <div class="receipt-row total"><span>Total estimated cost</span><span>${money(l.total)}</span></div>
+   </div>
+   <a class="checkout-cta" href="${l.url}" target="_blank" rel="noreferrer">Open on ${l.source}</a>
+   <div class="checkout-secondary"><span>${l.location} · ${l.freshness}</span></div>
+ </div>
+ <div class="priority-section"><div class="section-head"><div><h2>Listing information</h2></div></div><div class="scrape-card"><div class="scrape-grid"><div class="scrape-item"><small>Condition</small><b>${l.condition}</b></div><div class="scrape-item"><small>Weight</small><b>${l.weight||"Not listed"}</b></div><div class="scrape-item"><small>Year</small><b>${l.year||"Not listed"}</b></div><div class="scrape-item"><small>Included</small><b>${l.included||"Not listed"}</b></div></div><div class="scrape-notes"><b>Seller notes</b><br>${l.conditionNotes||l.description}</div></div></div>
+ <div class="priority-section"><div class="section-head"><div><h2>Purchase details</h2></div></div><div class="info-grid"><div class="info"><small>Returns</small><b>${l.returns}</b></div><div class="info"><small>Financing</small><b>${l.financing}</b></div><div class="info"><small>Source type</small><b>${l.sourceType}</b></div><div class="info"><small>Last checked</small><b>${l.freshness}</b></div></div></div>
+ <div class="priority-section"><div class="section-head"><div><h2>About this listing</h2></div></div><div class="shop-card"><div class="shop-logo">${l.logoUrl?`<img src="${l.logoUrl}" alt="${l.source} logo">`:(l.logoText||l.source.slice(0,2).toUpperCase())}</div><div><b>${l.source}</b><span>${l.sourceType} · ${l.location}</span></div></div><div class="empty" style="margin-top:10px">${l.retailerDescription||l.description}</div>${l.sourceType.includes("Forum")||l.sourceType.includes("Local")?`<div class="notice">Private-sale listing: inspect the guitar carefully, verify the seller, and use safe payment and meetup practices.</div>`:""}<button class="cta-secondary" onclick="toggleCompare('${l.id}');updateTray()">Add to compare</button></div>`;
+ currentGallery=gallery;currentGalleryIndex=0;
+ show("listingView");
+ if(listingTransitionDirection){
+   listingView.classList.remove("listing-transition-next","listing-transition-prev");
+   void listingView.offsetWidth;
+   listingView.classList.add(listingTransitionDirection==="next"?"listing-transition-next":"listing-transition-prev");
+   setTimeout(()=>listingView.classList.remove("listing-transition-next","listing-transition-prev"),300);
+   listingTransitionDirection=null;
+ }
+}
+function toggleCostBreakdown(){
+ const block=document.getElementById("receiptBlock");if(!block)return;
+ block.classList.toggle("collapsed");
+ const btn=document.querySelector(".cost-toggle");
+ if(btn)btn.innerHTML=block.classList.contains("collapsed")?'<span>Cost breakdown</span><span class="chev">▾</span>':'<span>Hide breakdown</span><span class="chev">▴</span>'
+}
+let currentGallery=[],currentGalleryIndex=0;
+function setGalleryImage(index){
+ if(!currentGallery.length)return;
+ currentGalleryIndex=(index+currentGallery.length)%currentGallery.length;
+ const main=document.getElementById("listingGalleryMain"),counter=document.getElementById("galleryCounter"),thumbs=[...document.querySelectorAll("#listingGalleryThumbs .thumb")];
+ if(main)main.src=currentGallery[currentGalleryIndex];
+ if(counter)counter.textContent=`${currentGalleryIndex+1} / ${currentGallery.length}`;
+ thumbs.forEach((thumb,i)=>thumb.classList.toggle("active",i===currentGalleryIndex))
+}
+function stepGallery(direction){setGalleryImage(currentGalleryIndex+direction)}
+let lastView="resultsView";function historyBack(){show(lastView)}
+function openCompare(){compareOverlay.classList.add("open");const items=listings.filter(x=>compare.has(x.id));compareGrid.innerHTML=items.map(l=>`<div class="compare-card"><h3>${l.source}</h3><p>${l.title}</p><p><b>${money(l.total)}</b> est. total</p><p>${l.condition} · ${l.country}</p></div>`).join("")}
+function closeCompare(){compareOverlay.classList.remove("open")}function compareOverlayClick(e){if(e.target===compareOverlay)closeCompare()}
+
+
+
+const advisorState={
+  step:0,
+  budget:"$1,000–$1,500",
+  customBudgetMin:"",
+  customBudgetMax:"",
+  genre:"Country",
+  artist:"Brad Paisley",
+  tuning:"Standard",
+  customTuning:"",
+  used:"Yes"
+};
+const advisorSteps=["budget","genre","artist","tuning","used","result"];
+const advisorCatalog=[
+ {name:"Jackson USA Signature Misha Mansoor Juggernaut HT6",query:"Jackson USA Signature Misha Mansoor Juggernaut HT6 Satin Silver",price:4399,artists:["misha mansoor","periphery"],genres:["djent","metalcore","progressive metal"],strings:6,tunings:["standard","drop d","drop c"],role:"Direct artist signature",why:"The clearest 6-string artist-authentic option for a Misha Mansoor-inspired setup.",tags:["Misha signature","Hardtail","Progressive metal"]},
+ {name:"Jackson USA Signature Misha Mansoor Juggernaut HT7FM",query:"Jackson USA Signature Misha Mansoor Juggernaut HT7FM Satin Laguna Burst",price:4950,artists:["misha mansoor","periphery"],genres:["djent","metalcore","progressive metal"],strings:7,tunings:["drop a","drop g#","drop c"],role:"Direct artist signature",why:"A premium 7-string Misha signature option when extended range is important.",tags:["Misha signature","7 string","Hardtail"]},
+ {name:"Jackson Pro Plus Signature Misha Mansoor Juggernaut HT7",query:"Jackson Pro Plus Signature Misha Mansoor Juggernaut HT7",price:1199,artists:["misha mansoor","periphery"],genres:["djent","metalcore","progressive metal"],strings:7,tunings:["drop a","drop g#","drop c"],role:"Lower-priced signature",why:"A lower-priced artist-authentic option, shown only when it fits the selected budget.",tags:["Misha signature","7 string","Value"]},
+ {name:"Mayones Duvell Elite 7",query:"Mayones Duvell Elite 7",price:3995,artists:[],genres:["djent","metalcore","progressive metal"],strings:7,tunings:["drop a","drop g#","drop c"],role:"High-fit alternate",why:"A premium modern-metal alternate with extended-range capability and boutique positioning.",tags:["7 string","Boutique","Modern metal"]},
+ {name:"Ernie Ball Music Man JP15 7 String",query:"Music Man JP15 7 String Green Tiger Eye",price:3999,artists:["john petrucci"],genres:["progressive metal","djent","rock"],strings:7,tunings:["standard","drop a","drop c"],role:"High-fit alternate",why:"A premium 7-string alternate with broad tonal flexibility for technical progressive playing.",tags:["7 string","Piezo","Versatile"]},
+ {name:"Ernie Ball Music Man Majesty",query:"Music Man Majesty Arctic Dream",price:4499,artists:["john petrucci"],genres:["progressive metal","djent","rock"],strings:6,tunings:["standard","drop d","eb"],role:"High-fit alternate",why:"A premium prog-oriented alternate with ergonomic design and versatile electronics.",tags:["Prog metal","Piezo","Premium"]},
+ {name:"Ibanez JBBM40 JB Brubaker Signature",query:"Ibanez JBBM40 Black Flat",price:1199,artists:["jb brubaker","august burns red"],genres:["metalcore"],strings:6,tunings:["drop c","drop b"],role:"Direct artist signature",why:"The correct JB Brubaker signature option for August Burns Red-inspired metalcore playing.",tags:["JB Brubaker signature","Active pickups","Metalcore"]},
+ {name:"G&L Tribute ASAT Classic",query:"G&L Tribute ASAT Classic Butterscotch",price:649,artists:["brad paisley"],genres:["country","bluegrass"],strings:6,tunings:["standard","drop d"],role:"Best value",why:"Tele-style attack and bridge clarity make this a strong country-focused value option.",tags:["Tele style","Country","Value"]},
+ {name:"Fender Player Telecaster",query:"Fender Player Telecaster Butterscotch",price:849,artists:["brad paisley"],genres:["country","bluegrass","indie"],strings:6,tunings:["standard","drop d"],role:"High-fit alternate",why:"A recognizable Tele-style platform with bright attack and simple hardtail stability.",tags:["Tele style","Hardtail","Workhorse"]},
+ {name:"Fender Player Stratocaster HSS",query:"Fender Player Stratocaster HSS",price:849,artists:["john mayer"],genres:["blues","rock","funk","pop"],strings:6,tunings:["standard","eb","drop d"],role:"High-fit alternate",why:"A flexible HSS option with broad coverage for blues, funk, pop, and rock.",tags:["HSS","Versatile","Tremolo"]}
+];
+function advisorChoice(key,value){advisorState[key]=value;renderAdvisor()}
+function advisorGoTo(step){advisorState.step=Math.max(0,Math.min(step,advisorSteps.length-1));renderAdvisor()}
+function openAdvisor(){advisorState.step=0;renderAdvisor();show("advisorView")}
+function advisorNext(){if(advisorState.step<advisorSteps.length-1){advisorState.step++;renderAdvisor()}}
+function advisorBack(){if(advisorState.step>0){advisorState.step--;renderAdvisor()}else{show("resultsView")}}
+function advisorBudgetRange(){
+ const presets={
+  "Under $1,000":[0,999],
+  "$1,000–$1,500":[1000,1500],
+  "$1,500–$3,000":[1500,3000],
+  "$3,000–$5,000":[3000,5000],
+  "$5,000+":[5000,99999]
+ };
+ if(advisorState.budget==="Custom range")return [Number(advisorState.customBudgetMin||0),Number(advisorState.customBudgetMax||99999)];
+ return presets[advisorState.budget]||[0,99999]
+}
+function normalizeAdvisorText(value){return String(value||"").toLowerCase().trim()}
+function rankedAdvisorResults(){
+ const [min,max]=advisorBudgetRange(),genre=normalizeAdvisorText(advisorState.genre),artist=normalizeAdvisorText(advisorState.artist),tuning=normalizeAdvisorText(advisorState.tuning==="Custom"?advisorState.customTuning:advisorState.tuning);
+ return advisorCatalog
+  .filter(g=>g.price>=min&&g.price<=max)
+  .map(g=>{
+    let score=0,reasons=[];
+    const artistMatch=g.artists.some(a=>artist.includes(a)||a.includes(artist));
+    const genreMatch=g.genres.some(v=>genre.includes(v)||v.includes(genre));
+    const tuningMatch=!tuning||tuning==="not sure"||g.tunings.includes(tuning);
+    if(artistMatch){score+=70;reasons.push("artist match")}
+    if(genreMatch){score+=28;reasons.push("style match")}
+    if(tuningMatch){score+=10;reasons.push("tuning fit")}
+    if(g.role==="Direct artist signature"&&artistMatch)score+=25;
+    if(g.role==="High-fit alternate"&&genreMatch)score+=8;
+    return {...g,score,reasons}
+  })
+  .filter(g=>g.score>0)
+  .sort((a,b)=>b.score-a.score||a.price-b.price)
+  .slice(0,5)
+}
+function useAdvisorRecommendation(index){
+ const rec=rankedAdvisorResults()[index];if(!rec)return;
+ searchInput.value=rec.query;
+ document.getElementById("homeSearchInput").value=rec.query;
+ runSearch();
+ show("resultsView")
+}
+function editAdvisorAnswers(){advisorState.step=0;renderAdvisor();show("advisorView")}
+function renderAdvisor(){
+ const step=advisorSteps[advisorState.step];
+ const stepLabels=["Budget","Style","Inspo","Tuning","Used"];
+ const stepper=stepLabels.map((label,i)=>`<button class="${i===advisorState.step?"active":i<advisorState.step?"done":""}" onclick="advisorGoTo(${i})">${i+1}</button>`).join("");
+ let body="";
+ if(step==="budget"){
+   const options=["Under $1,000","$1,000–$1,500","$1,500–$3,000","$3,000–$5,000","$5,000+","Custom range"];
+   body=`<div class="advisor-label">Step 1</div><div class="advisor-question">What is your budget?</div><div class="choice-grid">${options.map(v=>`<button class="choice ${advisorState.budget===v?"active":""}" onclick="advisorChoice('budget','${v}')">${v}</button>`).join("")}</div>${advisorState.budget==="Custom range"?`<div class="custom-budget"><label>Minimum<input type="number" placeholder="$500" value="${advisorState.customBudgetMin}" oninput="advisorState.customBudgetMin=this.value"></label><label>Maximum<input type="number" placeholder="$2,500" value="${advisorState.customBudgetMax}" oninput="advisorState.customBudgetMax=this.value"></label></div><div class="helper">Use a custom range when the preset tiers are too broad.</div>`:""}`
+ }
+ if(step==="genre"){
+   const genres=["Country","Bluegrass","Blues","Classic rock","Modern rock","Hair metal","Metalcore","Djent","Progressive metal","Funk","Indie","Shoegaze","Punk","Jazz","Pop","Worship","R&B / Soul"];
+   body=`<div class="advisor-label">Step 2</div><div class="advisor-question">What do you want to play?</div><div class="choice-grid">${genres.map(v=>`<button class="choice ${advisorState.genre===v?"active":""}" onclick="advisorChoice('genre','${v}')">${v}</button>`).join("")}</div><div class="helper">Pick the closest primary style. Artist inspiration helps refine the recommendation.</div>`
+ }
+ if(step==="artist")body=`<div class="advisor-label">Step 3</div><div class="advisor-question">Who inspires your tone?</div><input class="advisor-input" value="${advisorState.artist}" oninput="advisorState.artist=this.value" placeholder="Favorite artist or band"><div class="helper">Examples: Misha Mansoor, Brad Paisley, August Burns Red, John Mayer.</div>`;
+ if(step==="tuning"){
+   const tunings=["Standard","Eb","Drop D","Drop C","Drop B","Drop A","Drop G#","Not sure","Custom"];
+   body=`<div class="advisor-label">Step 4</div><div class="advisor-question">What tuning do you use?</div><div class="choice-grid">${tunings.map(v=>`<button class="choice ${advisorState.tuning===v?"active":""}" onclick="advisorChoice('tuning','${v}')">${v}</button>`).join("")}</div>${advisorState.tuning==="Custom"?`<input class="advisor-input" value="${advisorState.customTuning}" oninput="advisorState.customTuning=this.value" placeholder="e.g. DADGAD, C# standard, open G">`:""}`
+ }
+ if(step==="used")body=`<div class="advisor-label">Step 5</div><div class="advisor-question">Are you open to used guitars?</div><div class="choice-grid">${["Yes","Maybe","No"].map(v=>`<button class="choice ${advisorState.used===v?"active":""}" onclick="advisorChoice('used','${v}')">${v}</button>`).join("")}</div>`;
+ if(step==="result"){
+   const results=rankedAdvisorResults(),[min,max]=advisorBudgetRange();
+   body=`<div class="advisor-label">Recommendations</div><div class="advisor-question">Your strongest options</div><div class="advisor-summary"><b>Your answers:</b> ${advisorState.genre} · ${advisorState.artist||"No artist"} · ${advisorState.tuning==="Custom"?(advisorState.customTuning||"Custom tuning"):advisorState.tuning} · ${max>90000?`${money(min)}+`:`${money(min)}–${money(max)}`}</div>${results.length?`<div class="result-list">${results.map((rec,i)=>`<div class="result-card ${i===0?"best":""}"><div class="result-card-top"><div><div class="result-label">${i===0?"Best match":rec.role}</div><h3>${rec.name}</h3></div><div class="result-price">${money(rec.price)}</div></div><p>${rec.why}</p><div class="result-tags">${rec.tags.map(tag=>`<span class="result-tag">${tag}</span>`).join("")}</div><button class="recommendation-cta" onclick="useAdvisorRecommendation(${i})"><span>Find listings for this guitar</span><span>→</span></button></div>`).join("")}</div>`:`<div class="empty" style="margin-top:12px">No strong in-budget matches are available in this prototype catalog. Edit your answers or widen the budget range.</div>`}<button class="edit-answers" onclick="editAdvisorAnswers()">← Edit quiz answers</button>`
+ }
+ advisorView.innerHTML=`<div class="page-head"><button class="back" onclick="advisorBack()">‹</button><div><div class="sub">Advisor</div><b>Find your guitar</b></div></div><div class="advisor-shell"><div class="advisor-cover"><h2>Get matched quickly.</h2><p>Answer a few questions and we’ll send you straight into exact-match Finder results.</p><div class="advisor-stepper">${stepper}</div></div><div class="advisor-body">${body}${step!=="result"?`<div class="advisor-actions"><button class="advisor-back" onclick="advisorBack()">Back</button><button class="advisor-next" onclick="advisorNext()">Next</button></div>`:""}</div></div>`
+}
+updateTray();renderSavedView();show('homeView');
+</script>
+</body>
+</html>

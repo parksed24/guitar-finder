@@ -1,0 +1,27 @@
+Implement the latest Guitar Finder design exactly from the files I added to this repo.
+
+Read `AGENTS.md` before doing any work.
+Treat `reference-prototype.html` as the visual and UX source of truth.
+Use `design-parity-checklist.md` as your completion checklist.
+
+Important:
+- Do not redesign the interface.
+- Do not preserve your earlier UI if it conflicts with the reference.
+- Rebuild the current production Next.js pages and components to match the prototype as closely as possible.
+- Keep the existing backend/Supabase work where it is useful, but prioritize visual and interaction parity first.
+- Reuse the existing exact-match Finder logic and advisor engine where practical.
+- Keep browsing available without signup.
+- Keep login prompts contextual: saving searches, saving listings, and accessing saved content.
+- Preserve all reference flows: Home, Finder, listing details, gallery, previous/next navigation, inline cost breakdown, compare, advisor, accounts, and alerts.
+
+Work in phases:
+1. Audit the current implementation against the reference prototype.
+2. Replace the current app shell and page styling with faithful components.
+3. Implement the flows from the parity checklist.
+4. Run the app locally and visually inspect the mobile layout.
+5. Run tests, lint, and build.
+6. Fix all issues.
+7. Update `design-parity-checklist.md`.
+8. Summarize any remaining parity gaps.
+
+Do not stop after generating code. Verify the running app.
