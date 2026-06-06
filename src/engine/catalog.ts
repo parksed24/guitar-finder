@@ -1,4 +1,4 @@
-import type { GuitarModel, Listing } from "./types.js";
+import type { GuitarModel, Listing } from "./types";
 
 const checkedAt = "2026-06-04T00:00:00Z";
 

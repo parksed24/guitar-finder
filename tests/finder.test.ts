@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findExactListings } from "../src/finder.js";
+import { findExactListings } from "../src/engine/finder";
 
 describe("Finder exact-match behavior", () => {
   it("excludes PRS SE model from PRS Holcomb Core search", () => {

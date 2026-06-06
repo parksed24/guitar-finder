@@ -1,6 +1,6 @@
-import { guitars } from "./catalog.js";
-import { normalizeText } from "./normalize.js";
-import type { AdvisorPreferences, GuitarModel, Recommendation, RecommendationLabel } from "./types.js";
+import { guitars } from "./catalog";
+import { normalizeText } from "./normalize";
+import type { AdvisorPreferences, GuitarModel, Recommendation, RecommendationLabel } from "./types";
 
 function priceForPreferences(guitar: GuitarModel, prefs: AdvisorPreferences): number | undefined {
   if (prefs.conditionPreference === "new-only") return guitar.typicalNewPrice;

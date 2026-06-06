@@ -1,6 +1,6 @@
-import { guitars, listings } from "./catalog.js";
-import { includesNormalized, sameNormalized } from "./normalize.js";
-import type { FinderSearch, GuitarModel, Listing } from "./types.js";
+import { guitars, listings } from "./catalog";
+import { includesNormalized, sameNormalized } from "./normalize";
+import type { FinderSearch, GuitarModel, Listing } from "./types";
 
 function matchesExactModel(guitar: GuitarModel, search: FinderSearch): boolean {
   if (search.brand && !sameNormalized(guitar.brand, search.brand)) return false;
