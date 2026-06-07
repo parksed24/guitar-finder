@@ -3,6 +3,17 @@ import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { uiCopy } from "../content/ui-copy";
 import { clearListingEnrichmentCache, enrichListingMetadata, extractPriceFromText, type ListingEnrichmentResult } from "./listing-enrichment";
 import type { ListingImage } from "./listing-images";
+import { defaultSourceAdapters, parsedSearchToCanonical, sourceListingToWebResult } from "./source-adapters";
+import {
+  assessListingAvailability,
+  displayNameForUrl,
+  isMarketplaceItemUrlByRegistry,
+  isSearchOrLandingUrl,
+  recordSourceDiscoveryCandidate,
+  sourceForUrl,
+  sourceTypeForListingUrl,
+  targetedSearchScopes
+} from "./source-registry";
 
 export type WebMatchConfidence = "Likely exact match" | "Possible exact match";
 
@@ -137,6 +148,10 @@ export interface SearchDiagnostics {
   fallbackPriceLabelsUsed?: number;
   rejectedPriceCandidates?: number;
   sourceSpecificParserErrors?: number;
+  directAdapterRequestCount?: number;
+  directAdapterListingCount?: number;
+  soldOrUnavailableRemoved?: number;
+  unknownDomainsDiscovered?: number;
 }
 
 interface SearchCursorVariant {
@@ -168,20 +183,14 @@ interface ClassificationDiagnostics {
   rejectionReasons: Record<string, number>;
 }
 
-type Fetcher = (input: string, init: RequestInit) => Promise<Response>;
+type Fetcher = (input: string, init?: RequestInit) => Promise<Response>;
 
 const searchCache = new Map<string, CacheEntry>();
 export const QUALIFIED_RESULTS_PER_BATCH = 12;
 const BRAVE_RESULTS_PER_PAGE = 20;
 const MAX_BRAVE_OFFSET = 9;
 
-const siteQueries = [
-  "reverb.com",
-  "ebay.com",
-  "craigslist.org",
-  "thegearpage.net",
-  "facebook.com/marketplace"
-];
+const siteQueries = targetedSearchScopes();
 
 const knownFinishes = [
   "sonic blue",
@@ -197,7 +206,7 @@ const knownFinishes = [
   "olympic white"
 ];
 
-const staleTerms = ["sold", "ended", "archived", "unavailable", "expired", "out of stock", "removed", "no longer available"];
+const staleTerms = ["sold", "ended", "listing ended", "listing has ended", "archived", "unavailable", "expired", "out of stock", "removed", "no longer available", "item unavailable"];
 const purchaseTerms = ["for sale", "buy", "in stock", "used", "new", "shop", "listing", "add to cart", "buy now", "$"];
 const rejectedDomains = ["wikipedia.org", "youtube.com", "youtu.be", "reddit.com"];
 const manufacturerDomains = ["fender.com", "prsguitars.com", "jacksonguitars.com", "ibanez.com"];
@@ -366,11 +375,15 @@ export function generateGuitarSearchQueries(parsed: ParsedGuitarSearch) {
   const brandFamily = [parsed.brand, parsed.family].filter(Boolean).join(" ");
   const precise = [quote(brandFamily), quote(modelPhrase || parsed.model), quote(parsed.variant), quote(parsed.finish)].filter(Boolean).join(" ");
   const full = [parsed.brand, parsed.family, parsed.model, parsed.variant].filter(Boolean).join(" ");
+  const commercialPhrase = quote([parsed.brand, parsed.family, parsed.model, parsed.variant, parsed.finish].filter(Boolean).join(" ") || parsed.originalQuery);
   const finish = quote(parsed.finish);
   const exclusions = parsed.exclusionTerms
     .filter(term => !["forum"].includes(normalize(term)))
     .map(term => `-${normalize(term).replace(/\s+/g, "-")}`)
     .join(" ");
+  const commercialIntents = ["for sale", "buy", "in stock", "used", "new", "guitar shop", "UK", "Europe", "Japan"];
+  const broadCommercialQueries = commercialIntents.map(intent => [commercialPhrase, intent, exclusions].filter(Boolean).join(" "));
+  const targetedQueries = siteQueries.map(site => `site:${site} ${[quote(brandFamily || parsed.brand), quote(modelPhrase || parsed.model || parsed.originalQuery), quote(parsed.variant), finish, site.includes("thegearpage") ? "" : exclusions].filter(Boolean).join(" ")}`);
 
   const holcombAlias = parsed.brand === "PRS" && parsed.family === "Core" && parsed.model === "Mark Holcomb Core"
     ? [
@@ -386,9 +399,8 @@ export function generateGuitarSearchQueries(parsed: ParsedGuitarSearch) {
     [precise || quote(parsed.originalQuery), "for sale", exclusions].filter(Boolean).join(" "),
     [quote(full || parsed.originalQuery), finish, "buy", exclusions].filter(Boolean).join(" "),
     [quote([parsed.brand, parsed.family, parsed.model, parsed.finish].filter(Boolean).join(" ") || parsed.originalQuery), "guitar", "in stock", exclusions].filter(Boolean).join(" "),
-    ...siteQueries.map(site => `site:${site} ${[quote(brandFamily || parsed.brand), quote(modelPhrase || parsed.model || parsed.originalQuery), quote(parsed.variant), finish, site.includes("thegearpage") ? "" : exclusions].filter(Boolean).join(" ")}`),
-    [quote(full || parsed.originalQuery), finish, "UK", "shop", exclusions].filter(Boolean).join(" "),
-    [quote(full || parsed.originalQuery), finish, "Japan", "shop", exclusions].filter(Boolean).join(" ")
+    ...targetedQueries,
+    ...broadCommercialQueries
   ].filter(query => query.trim().length > 0));
 }
 
@@ -416,6 +428,8 @@ function domainFromUrl(url: string) {
 }
 
 function sourceName(result: BraveWebResult, url: string) {
+  const registryName = displayNameForUrl(url);
+  if (registryName) return registryName;
   if (result.profile?.name) return result.profile.name;
   const domain = domainFromUrl(url).split(".");
   return domain[0] ? domain[0][0].toUpperCase() + domain[0].slice(1) : undefined;
@@ -441,6 +455,8 @@ function urlPath(url: string) {
 }
 
 function sourceTypeForUrl(url: string): UnifiedSourceType {
+  const registryType = sourceTypeForListingUrl(url);
+  if (registryType) return registryType;
   const domain = domainFromUrl(url);
   if (domain.includes("reverb") || domain.includes("ebay") || domain.includes("facebook")) return "marketplace";
   if (domain.includes("craigslist")) return "classified";
@@ -453,6 +469,7 @@ function sourceTypeForUrl(url: string): UnifiedSourceType {
 function isMarketplaceItemUrl(url: string) {
   const value = url.toLowerCase();
   return (
+    isMarketplaceItemUrlByRegistry(url) ||
     value.includes("reverb.com/item/") ||
     value.includes("ebay.com/itm/") ||
     value.includes("facebook.com/marketplace/item/") ||
@@ -469,6 +486,7 @@ function isSearchOrLandingPage(url: string, text: string) {
   const value = url.toLowerCase();
   const normalized = normalize(text);
   return (
+    isSearchOrLandingUrl(url, text) ||
     value.includes("wikipedia.org") ||
     rejectedDomains.some(domain => value.includes(domain)) ||
     value.includes("/search") ||
@@ -652,6 +670,8 @@ function classifyWebResultWithReason(parsed: ParsedGuitarSearch, result: BraveWe
   if (isSearchOrLandingPage(result.url, text)) return { result: null, reason: searchOrLandingReason(result.url, text) };
 
   const normalized = normalize(text);
+  const availability = assessListingAvailability(text, result.url);
+  if (!availability.isAvailable) return { result: null, reason: "sold-or-archived" };
   const warningTerms = staleTerms.filter(term => normalized.includes(term));
   if (warningTerms.length) return { result: null, reason: "sold-or-archived" };
 
@@ -672,6 +692,8 @@ function classifyWebResultWithReason(parsed: ParsedGuitarSearch, result: BraveWe
     : undefined;
 
   const canonical = canonicalUrl(result.url);
+  const registrySource = sourceForUrl(result.url);
+  if (!registrySource) recordSourceDiscoveryCandidate(result.url);
 
   return {
     result: {
@@ -831,10 +853,31 @@ async function collectQualifiedBatch(parsedQuery: ParsedGuitarSearch, cursor: Se
   let fallbackPriceLabelsUsed = 0;
   let rejectedPriceCandidates = 0;
   let sourceSpecificParserErrors = 0;
+  let directAdapterRequestCount = 0;
+  let directAdapterListingCount = 0;
+  let soldOrUnavailableRemoved = 0;
+  let unknownDomainsDiscovered = 0;
 
   while (cursor.pendingResults.length > 0 && emitted.length < QUALIFIED_RESULTS_PER_BATCH) {
     const next = cursor.pendingResults.shift();
     if (next) emitted.push(next);
+  }
+
+  if (!cursor.seenUrls.length) {
+    const direct = await collectDirectAdapterResults(parsedQuery, fetcher);
+    directAdapterRequestCount = direct.adapterRequestCount;
+    directAdapterListingCount = direct.directListingCount;
+    soldOrUnavailableRemoved += direct.soldOrUnavailableRemoved;
+    direct.apiErrors.forEach(error => apiErrors.push(error));
+    for (const result of direct.webResults) {
+      const urlKey = canonicalUrl(result.url);
+      const titleKey = normalize(result.title).slice(0, 90);
+      if (cursor.seenUrls.includes(urlKey) || cursor.seenTitleKeys.includes(titleKey)) continue;
+      cursor.seenUrls.push(urlKey);
+      cursor.seenTitleKeys.push(titleKey);
+      if (emitted.length < QUALIFIED_RESULTS_PER_BATCH) emitted.push(result);
+      else cursor.pendingResults.push(result);
+    }
   }
 
   let cursorIndex = 0;
@@ -894,7 +937,18 @@ async function collectQualifiedBatch(parsedQuery: ParsedGuitarSearch, cursor: Se
       if (enrichment.rejectionReasons?.some(reason => reason.includes("price"))) rejectedPriceCandidates += 1;
       if (enrichment.rejectionReasons?.includes("source-specific-parser-error")) sourceSpecificParserErrors += 1;
       enrichment.rejectionReasons?.forEach(reason => incrementReason(rejectionReasons, reason));
-      enrichedResults.push(applyEnrichment(result, enrichment));
+      const enriched = applyEnrichment(result, enrichment);
+      const postEnrichmentAvailability = assessListingAvailability(`${enriched.title} ${enriched.snippet ?? ""}`, enriched.url, enriched.availability);
+      if (!postEnrichmentAvailability.isAvailable) {
+        soldOrUnavailableRemoved += 1;
+        incrementReason(rejectionReasons, "sold-or-archived");
+        continue;
+      }
+      if (!sourceForUrl(enriched.url)) {
+        recordSourceDiscoveryCandidate(enriched.url);
+        unknownDomainsDiscovered += 1;
+      }
+      enrichedResults.push(enriched);
     }
 
     const ranked = enrichedResults.sort((a, b) => rankScore(b) - rankScore(a));
@@ -922,8 +976,55 @@ async function collectQualifiedBatch(parsedQuery: ParsedGuitarSearch, cursor: Se
     searchRichResultPricesExtracted,
     fallbackPriceLabelsUsed,
     rejectedPriceCandidates,
-    sourceSpecificParserErrors
+    sourceSpecificParserErrors,
+    directAdapterRequestCount,
+    directAdapterListingCount,
+    soldOrUnavailableRemoved,
+    unknownDomainsDiscovered
   };
+}
+
+async function collectDirectAdapterResults(parsedQuery: ParsedGuitarSearch, fetcher: Fetcher) {
+  const webResults: WebSearchResult[] = [];
+  const apiErrors: SearchDiagnostics["apiErrors"] = [];
+  let adapterRequestCount = 0;
+  let directListingCount = 0;
+  let soldOrUnavailableRemoved = 0;
+  const canonical = parsedSearchToCanonical(parsedQuery);
+
+  for (const adapter of defaultSourceAdapters({ fetcher })) {
+    if (adapter.sourceId !== "ebay") continue;
+    adapterRequestCount += 1;
+    const response = await adapter.search(canonical).catch(error => ({
+      sourceId: adapter.sourceId,
+      listings: [],
+      searchedAliases: [],
+      errors: [error instanceof Error ? error.message : "Source adapter failed"]
+    }));
+    response.errors.forEach(message => {
+      if (!message.includes("not configured")) apiErrors.push({ query: adapter.sourceId, message });
+    });
+    for (const listing of response.listings) {
+      const text = `${listing.title} ${listing.condition ?? ""} ${listing.availability ?? ""}`;
+      const availability = assessListingAvailability(text, listing.url, listing.availability);
+      if (!availability.isAvailable) {
+        soldOrUnavailableRemoved += 1;
+        continue;
+      }
+      if (hasContradiction(parsedQuery, text)) continue;
+      const exact = exactMatchConfidence(parsedQuery, text, listing.url);
+      if (exact < 0.82) continue;
+      const webResult = sourceListingToWebResult(listing);
+      webResults.push({
+        ...webResult,
+        exactMatchConfidence: exact,
+        confidence: exact >= 0.94 && webResult.itemPrice !== undefined && webResult.thumbnailUrl ? "Likely exact match" : "Possible exact match"
+      });
+      directListingCount += 1;
+    }
+  }
+
+  return { webResults, apiErrors, adapterRequestCount, directListingCount, soldOrUnavailableRemoved };
 }
 
 export async function searchOpenWebForGuitars(query: string, options: {
@@ -961,7 +1062,11 @@ export async function searchOpenWebForGuitars(query: string, options: {
     searchRichResultPricesExtracted: 0,
     fallbackPriceLabelsUsed: 0,
     rejectedPriceCandidates: 0,
-    sourceSpecificParserErrors: 0
+    sourceSpecificParserErrors: 0,
+    directAdapterRequestCount: 0,
+    directAdapterListingCount: 0,
+    soldOrUnavailableRemoved: 0,
+    unknownDomainsDiscovered: 0
   };
   let searchCompleted = true;
   let errorMessage: string | undefined;
@@ -1001,7 +1106,11 @@ export async function searchOpenWebForGuitars(query: string, options: {
     searchRichResultPricesExtracted: batch.searchRichResultPricesExtracted,
     fallbackPriceLabelsUsed: batch.fallbackPriceLabelsUsed,
     rejectedPriceCandidates: batch.rejectedPriceCandidates,
-    sourceSpecificParserErrors: batch.sourceSpecificParserErrors
+    sourceSpecificParserErrors: batch.sourceSpecificParserErrors,
+    directAdapterRequestCount: batch.directAdapterRequestCount,
+    directAdapterListingCount: batch.directAdapterListingCount,
+    soldOrUnavailableRemoved: batch.soldOrUnavailableRemoved,
+    unknownDomainsDiscovered: batch.unknownDomainsDiscovered
   };
   const response: WebSearchResponse = {
     query,
